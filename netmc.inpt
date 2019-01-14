@@ -1,0 +1,28 @@
+I/0
+./output_files/test         output prefix
+--------------------------------------------------
+Network Properties
+100         number of rings
+4           min ring size
+10          max ring size
+square      lattice (square,hexagonal...)
+--------------------------------------------------
+Monte Carlo Process
+0           random seed
+0.1         temperature
+--------------------------------------------------
+Potential Model
+1.0         harmonic bond force constant
+0.2         harmonic angle force constant
+10.0        harmonic geometry constraint
+--------------------------------------------------
+Geometry Optimisation
+1000        monte carlo local max iterations
+1           global minimisation max iterations
+0.5         tau backtracking parameter
+1e-07       tolerance
+10          local region size
+--------------------------------------------------
+Analysis
+
+--------------------------------------------------
