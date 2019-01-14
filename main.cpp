@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include "outputfile.h"
+#include "linked_network.h"
 
 using namespace std;
 
@@ -70,7 +71,8 @@ int main(){
     istringstream(line)>>goptLocalSize;
     inputFile.close();
 
-
+    //Initialise network
+    LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
 
 
 
