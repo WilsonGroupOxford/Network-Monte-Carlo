@@ -39,7 +39,7 @@ public:
 
     //Member Functions
     void initialisePotentialModel(double ak, double bk, double ck=0.0); //set up potential model
-    void initialiseGeometryOpt(int iterations, double tau, double tolerance); //set up geometry optimsiation parameters
+    void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters
     void initialiseMonteCarlo(double temperature, int seed=0); //set up monte carlo
     void rescale(double scaleFactor); //rescale lattice dimensions
     void project(string projType, double param); //project lattice onto different geometry
@@ -47,12 +47,13 @@ public:
     void randomCnx(int& a, int& b, int& u, int& v, mt19937& gen); //choose nodes forming random edge in lattice A, and corresponding nodes in lattice B
     int generateSwitchIds(VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u=-1, int v=-1); //get all ids of nodes in lattice A and B needed for switch move
     void switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice
-    int monteCarloSwitchMove(); //monte carlo switching move
+    VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
     double globalPotentialEnergy(); //calculate potential energy of entire system
     void globalGeometryOptimisation(); //geometry optimise entire system
-    void localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx=false); //geometry optimise subsection of system
+    VecF<int> localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx=false); //geometry optimise subsection of system
     void generateHarmonics(int id, VecR<int>& bonds, VecR<double>& bondParams); //generate harmonic interactions
     void generateIntersections(int id, VecR<int>& intersections); //generate intersection interactions
+    void wrapCoordinates(); //wrap coordinates if periodic
     void syncCoordinates(); //update geometry optimised coordinates to networks
     VecF<double> getNodeDistribution(string lattice); //get proportion of nodes of each size
     VecF<double> getAboavWeaire(string lattice); //get aboav-weaire parameters

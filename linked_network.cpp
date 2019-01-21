@@ -82,10 +82,11 @@ void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck) {
 }
 
 //Set up geometry optimisation parameters
-void LinkedNetwork::initialiseGeometryOpt(int iterations, double tau, double tolerance) {
+void LinkedNetwork::initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent) {
 
-    goptParamsA=VecF<int>(1);
+    goptParamsA=VecF<int>(2);
     goptParamsA[0]=iterations;
+    goptParamsA[1]=localExtent;
     goptParamsB=VecF<double>(2);
     goptParamsB[0]=tau;
     goptParamsB[1]=tolerance;
@@ -434,7 +435,7 @@ void LinkedNetwork::switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB) {
 }
 
 //Single monte carlo switching move
-int LinkedNetwork::monteCarloSwitchMove() {
+VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
 
     /* Single MC switch move
      * 1) select random connection
@@ -454,6 +455,7 @@ int LinkedNetwork::monteCarloSwitchMove() {
     if(validMove==1) throw "Cannot find any valid switch moves";
 
     //Save current state
+    double saveEnergy=energy;
     VecF<double> saveCrdsA=crdsA;
     VecF<int> saveNodeDistA=networkA.nodeDistribution;
     VecF<int> saveNodeDistB=networkB.nodeDistribution;
@@ -464,14 +466,16 @@ int LinkedNetwork::monteCarloSwitchMove() {
     for(int i=0; i<saveNodesB.n; ++i) saveNodesB[i]=networkB.nodes[switchIdsB[i]];
 
     //Switch and geometry optimise
+    VecF<int> optStatus;
     switchCnx(switchIdsA,switchIdsB);
     localGeometryOptimisation(a,b,1); //bond switch atoms only
-    localGeometryOptimisation(a,b,10,true); //wider area
+    optStatus=localGeometryOptimisation(a,b,goptParamsA[1],true); //wider area
 
     //Accept or reject
-    double energy=globalPotentialEnergy();
+    energy=globalPotentialEnergy();
     int accept=mc.acceptanceCriterion(energy);
     if(accept==0){
+        energy=saveEnergy;
         crdsA=saveCrdsA;
         networkA.nodeDistribution=saveNodeDistA;
         networkA.edgeDistribution=saveEdgeDistA;
@@ -481,7 +485,16 @@ int LinkedNetwork::monteCarloSwitchMove() {
         for(int i=0; i<saveNodesB.n; ++i) networkB.nodes[switchIdsB[i]]=saveNodesB[i];
     }
 
-    return accept;
+    /* Status report
+     * [0] accepted/rejected 1/0
+     * [1] optimisation code 0=successful 1=successful(zero force) 2=unsuccessful(it limit) 3=unsuccessful(intersection)
+     * [2] optimisation iterations */
+    VecF<int> status(3);
+    status[0]=accept;
+    status[1]=optStatus[0];
+    status[2]=optStatus[1];
+
+    return status;
 }
 
 
@@ -584,7 +597,7 @@ void LinkedNetwork::globalGeometryOptimisation() {
 }
 
 //Geometry optimise subsection of system by only including interactions in a specified range
-void LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx) {
+VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx) {
 
     /* Find three regions
      * 1) local (full interactions)
@@ -609,6 +622,9 @@ void LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int exte
         for(int i=0; i<local.n; ++i){
             generateIntersections(local[i],intersections);
         }
+        for(int i=0; i<fixedInner.n; ++i){
+            generateIntersections(fixedInner[i],intersections);
+        }
     }
 
     //Assign to fixed size arrays
@@ -621,6 +637,7 @@ void LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int exte
     for(int i=0; i<intersections.n; ++i) intx[i]=intersections[i];
 
     //Geometry optimise
+    VecF<int> optStatus(2);
     if(networkA.geometryCode=="2DE"){
         HI2DP potModel(networkA.pb[0],networkA.pb[1]);
         potModel.setBonds(bnds,bndP);
@@ -628,7 +645,11 @@ void LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int exte
         potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//optimise if no line intersections
             SteepestDescentArmijo<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
-            optimiser(potModel,crdsA);
+            optStatus=optimiser(potModel,crdsA);
+        }
+        else{
+            optStatus[0]=3;
+            optStatus[1]=0;
         }
     }
     else if(networkA.geometryCode=="2DS"){
@@ -639,8 +660,9 @@ void LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int exte
         potModel.setFixedAtoms(fixd);
         potModel.setGeomConstraints(constrained,potParamsC);
         SteepestDescentArmijo<HLJ3DS> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
-        optimiser(potModel,crdsA);
+        optStatus=optimiser(potModel,crdsA);
     }
+    return optStatus;
 }
 
 
@@ -696,128 +718,113 @@ void LinkedNetwork::generateIntersections(int id, VecR<int> &intersections) {
         intersections.addValue(id2);
     }
 
-//    /* Creat unique intersections with local environment
-//     * treat 3/4 coordinate separately to optimise*/
-//    int cnd; //coordination
-//    int idA0,idA1,idA2,idA3,idA4,idB;
-//    int l0a,l0b,l1a,l1b,l2a,l2b;
-//    idA0=id;
-//    cnd=networkA.nodes[idA0].netCnxs.n;
-//    if(cnd==3) {
-//        for (int j = 0; j < cnd; ++j) {
-//            idA1 = networkA.nodes[idA0].netCnxs[j];
-//            idA2 = networkA.nodes[idA0].netCnxs[(j + 1) % cnd];
-//            idB = vCommonValues(networkA.nodes[idA1].dualCnxs, networkA.nodes[idA2].dualCnxs)[0];
-//            VecR<int> edgeIds = networkB.nodes[idB].dualCnxs;
-//            VecR<int> edges(0, edgeIds.n * 2);
-//            for (int k = 0; k<edgeIds.n; ++k) {
-//                idA3 = edgeIds[k];
-//                idA4 = edgeIds[(k + 1) % edgeIds.n];
-//                if (idA3 != idA0 && idA4 != idA0) {
-//                    edges.addValue(idA3);
-//                    edges.addValue(idA4);
-//                }
-//            }
-//            idA3 = networkA.nodes[idA0].netCnxs[(j + 2) % cnd];
-//            if(idA0<idA3){
-//                l0a=idA0;
-//                l0b=idA3;
-//            }
-//            else{
-//                l0a=idA3;
-//                l0b=idA0;
-//            }
-//            //prevent overlap of edges
-//            for(int k=0,l=1; k<edges.n; k+=2,l+=2){
-//                if(edges[k]<edges[l]){
-//                    l1a=edges[k];
-//                    l1b=edges[l];
-//                }
-//                else{
-//                    l1a=edges[l];
-//                    l1b=edges[k];
-//                }
-//                if(l0a<l1a) {//prevent double counting
-//                    intersections.addValue(l0a);
-//                    intersections.addValue(l0b);
-//                    intersections.addValue(l1a);
-//                    intersections.addValue(l1b);
-//                }
-//            }
-//            //maintain convexity
-////            intersections.addValue(idA0);
-////            intersections.addValue(idA3);
-////            intersections.addValue(idA1);
-////            intersections.addValue(idA2);
-//        }
-//    }
-//    else if(cnd==4) {
-//        for (int j = 0; j < cnd; ++j) {
-//            idA1 = networkA.nodes[idA0].netCnxs[j];
-//            idA2 = networkA.nodes[idA0].netCnxs[(j + 1) % cnd];
-//            idB = vCommonValues(networkA.nodes[idA1].dualCnxs, networkA.nodes[idA2].dualCnxs)[0];
-//            VecR<int> edgeIds = networkB.nodes[idB].dualCnxs;
-//            VecR<int> edges(0, edgeIds.n * 2);
-//            for (int k = 0; k<edgeIds.n; ++k) {
-//                idA3 = edgeIds[k];
-//                idA4 = edgeIds[(k + 1) % edgeIds.n];
-//                if (idA3 != idA0 && idA4 != idA0) {
-//                    edges.addValue(idA3);
-//                    edges.addValue(idA4);
-//                }
-//            }
-//            idA3 = networkA.nodes[idA0].netCnxs[(j + 2) % cnd];
-//            idA4 = networkA.nodes[idA0].netCnxs[(j + 3) % cnd];
-//            if(idA0<idA3){
-//                l0a=idA0;
-//                l0b=idA3;
-//            }
-//            else{
-//                l0a=idA3;
-//                l0b=idA0;
-//            }
-//            if(idA0<idA4){
-//                l1a=idA0;
-//                l1b=idA4;
-//            }
-//            else{
-//                l1a=idA4;
-//                l1b=idA0;
-//            }
-//            //prevent overlap of edges
-//            for(int k=0,l=1; k<edges.n; k+=2,l+=2){
-//                if(edges[k]<edges[l]){
-//                    l2a=edges[k];
-//                    l2b=edges[l];
-//                }
-//                else{
-//                    l2a=edges[l];
-//                    l2b=edges[k];
-//                }
-//                if(l0a<l2a) {
-//                    intersections.addValue(l0a);
-//                    intersections.addValue(l0b);
-//                    intersections.addValue(l2a);
-//                    intersections.addValue(l2b);
-//                }
-//                if(l1a<l2a) {
-//                    intersections.addValue(l1a);
-//                    intersections.addValue(l1b);
-//                    intersections.addValue(l2a);
-//                    intersections.addValue(l2b);
-//                }
-//            }
-//            //maintain convexity
-////            intersections.addValue(idA0);
-////            intersections.addValue(idA3);
-////            intersections.addValue(idA1);
-////            intersections.addValue(idA2);
-////            intersections.addValue(idA0);
-////            intersections.addValue(idA4);
-////            intersections.addValue(idA1);
-////            intersections.addValue(idA2);
-//        }
-//    }
+    /* Create unique intersections with local environment
+     * treat 3/4 coordinate separately to optimise*/
+    int idA0,idA1,idA2,idA3,idA4,idB;
+    int l0a,l0b,l1a,l1b,l2a,l2b;
+    idA0=id;
+    cnd=networkA.nodes[idA0].netCnxs.n;
+    if(cnd==3) {
+        for (int j = 0; j < cnd; ++j) {
+            idA1 = networkA.nodes[idA0].netCnxs[j];
+            idA2 = networkA.nodes[idA0].netCnxs[(j + 1) % cnd];
+            idB = vCommonValues(networkA.nodes[idA1].dualCnxs, networkA.nodes[idA2].dualCnxs)[0];
+            VecR<int> edgeIds = networkB.nodes[idB].dualCnxs;
+            VecR<int> edges(0, edgeIds.n * 2);
+            for (int k = 0; k<edgeIds.n; ++k) {
+                idA3 = edgeIds[k];
+                idA4 = edgeIds[(k + 1) % edgeIds.n];
+                if (idA3 != idA0 && idA4 != idA0) {
+                    edges.addValue(idA3);
+                    edges.addValue(idA4);
+                }
+            }
+            idA3 = networkA.nodes[idA0].netCnxs[(j + 2) % cnd];
+            if(idA0<idA3){
+                l0a=idA0;
+                l0b=idA3;
+            }
+            else{
+                l0a=idA3;
+                l0b=idA0;
+            }
+            //prevent overlap of edges
+            for(int k=0,l=1; k<edges.n; k+=2,l+=2){
+                if(edges[k]<edges[l]){
+                    l1a=edges[k];
+                    l1b=edges[l];
+                }
+                else{
+                    l1a=edges[l];
+                    l1b=edges[k];
+                }
+                if(l0a<l1a) {//prevent double counting
+                    intersections.addValue(l0a);
+                    intersections.addValue(l0b);
+                    intersections.addValue(l1a);
+                    intersections.addValue(l1b);
+                }
+            }
+        }
+    }
+    else if(cnd==4) {
+        for (int j = 0; j < cnd; ++j) {
+            idA1 = networkA.nodes[idA0].netCnxs[j];
+            idA2 = networkA.nodes[idA0].netCnxs[(j + 1) % cnd];
+            idB = vCommonValues(networkA.nodes[idA1].dualCnxs, networkA.nodes[idA2].dualCnxs)[0];
+            VecR<int> edgeIds = networkB.nodes[idB].dualCnxs;
+            VecR<int> edges(0, edgeIds.n * 2);
+            for (int k = 0; k<edgeIds.n; ++k) {
+                idA3 = edgeIds[k];
+                idA4 = edgeIds[(k + 1) % edgeIds.n];
+                if (idA3 != idA0 && idA4 != idA0) {
+                    edges.addValue(idA3);
+                    edges.addValue(idA4);
+                }
+            }
+            idA3 = networkA.nodes[idA0].netCnxs[(j + 2) % cnd];
+            idA4 = networkA.nodes[idA0].netCnxs[(j + 3) % cnd];
+            if(idA0<idA3){
+                l0a=idA0;
+                l0b=idA3;
+            }
+            else{
+                l0a=idA3;
+                l0b=idA0;
+            }
+            if(idA0<idA4){
+                l1a=idA0;
+                l1b=idA4;
+            }
+            else{
+                l1a=idA4;
+                l1b=idA0;
+            }
+            //prevent overlap of edges
+            for(int k=0,l=1; k<edges.n; k+=2,l+=2){
+                if(edges[k]<edges[l]){
+                    l2a=edges[k];
+                    l2b=edges[l];
+                }
+                else{
+                    l2a=edges[l];
+                    l2b=edges[k];
+                }
+                if(l0a<l2a) {
+                    intersections.addValue(l0a);
+                    intersections.addValue(l0b);
+                    intersections.addValue(l2a);
+                    intersections.addValue(l2b);
+                }
+                if(l1a<l2a) {
+                    intersections.addValue(l1a);
+                    intersections.addValue(l1b);
+                    intersections.addValue(l2a);
+                    intersections.addValue(l2b);
+                }
+            }
+        }
+    }
 }
 
 //Update networks with geometry optimised coordinates
@@ -927,8 +934,12 @@ VecF<double> LinkedNetwork::getEntropy(string lattice) {
 
 //Check linked networks for consistency
 bool LinkedNetwork::checkConsistency() {
-    //
-    return false;
+
+    bool checkCnx=checkCnxConsistency();
+    bool checkDesc=checkDescriptorConsistency();
+    bool check=checkCnx*checkDesc;
+
+    return check;
 }
 
 //Check linked networks have mutual network and dual connections
@@ -1087,6 +1098,15 @@ bool LinkedNetwork::checkDescriptorConsistency() {
     bool consistent=nodeA*nodeB*edgeA*edgeB;
 
     return consistent;
+}
+
+//Wrap coordinates of lattice A if periodic
+void LinkedNetwork::wrapCoordinates() {
+
+    if(networkA.geometryCode=="2DE"){
+        HI2DP potModel(networkA.pb[0],networkA.pb[1]);
+        potModel.wrap(crdsA);
+    }
 }
 
 //Write xyz file format of networks

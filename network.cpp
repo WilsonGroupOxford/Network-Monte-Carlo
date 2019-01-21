@@ -1050,7 +1050,7 @@ double Network::aboavWeaireEstimate() {
     double alpha;
     double r=assortativity();
     double mu=n2-nSq;
-    alpha=(-r*(n*n3-n2*n2)-mu*mu)/(n2*mu);
+    alpha=(-r*(n*n3-n2*n2)-mu*mu)/(nSq*mu);
 
     return alpha;
 }
