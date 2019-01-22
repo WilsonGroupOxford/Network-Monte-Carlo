@@ -26,6 +26,7 @@ public:
     mt19937 mtGen; //mersenne twister random number generator
     Metropolis mc; //monte carlo metropolis condition
     VecF<double> potParamsA,potParamsB,potParamsC; //potetial model parameters (angles, bonds, constraints)
+    VecF<int> potParamsD; //potential model intersection parameters
     VecF<int> goptParamsA; //geometry optimisation parameters
     VecF<double> goptParamsB; //geometry optimisation parameters
 
@@ -38,7 +39,7 @@ public:
     LinkedNetwork(string prefix);  //construct by loading from files
 
     //Member Functions
-    void initialisePotentialModel(double ak, double bk, double ck=0.0); //set up potential model
+    void initialisePotentialModel(double ak, double bk, double ck=0.0, int convexity=1); //set up potential model
     void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters
     void initialiseMonteCarlo(double temperature, int seed=0); //set up monte carlo
     void rescale(double scaleFactor); //rescale lattice dimensions
@@ -48,11 +49,11 @@ public:
     int generateSwitchIds(VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u=-1, int v=-1); //get all ids of nodes in lattice A and B needed for switch move
     void switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
-    double globalPotentialEnergy(); //calculate potential energy of entire system
-    void globalGeometryOptimisation(); //geometry optimise entire system
-    VecF<int> localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx=false); //geometry optimise subsection of system
+    double globalPotentialEnergy(bool useIntx, bool keepConvex); //calculate potential energy of entire system
+    void globalGeometryOptimisation(bool useIntx, bool keepConvex); //geometry optimise entire system
+    VecF<int> localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx, bool keepConvex); //geometry optimise subsection of system
     void generateHarmonics(int id, VecR<int>& bonds, VecR<double>& bondParams); //generate harmonic interactions
-    void generateIntersections(int id, VecR<int>& intersections); //generate intersection interactions
+    void generateIntersections(int id, VecR<int>& intersections, bool keepConvex); //generate intersection interactions
     void wrapCoordinates(); //wrap coordinates if periodic
     void syncCoordinates(); //update geometry optimised coordinates to networks
     VecF<double> getNodeDistribution(string lattice); //get proportion of nodes of each size

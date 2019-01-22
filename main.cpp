@@ -55,12 +55,15 @@ int main(){
     logfile.write("Monte Carlo parameters read");
     //Potential model
     double potAK,potBK,potCK;
+    int convexity;
     getline(inputFile,line);
     istringstream(line)>>potBK;
     getline(inputFile,line);
     istringstream(line)>>potAK;
     getline(inputFile,line);
     istringstream(line)>>potCK;
+    getline(inputFile,line);
+    istringstream(line)>>convexity;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Potential parameters read");
@@ -100,9 +103,10 @@ int main(){
     logfile.write("Monte carlo temperature:",mcTemperature);
     logfile.write("Monte carlo steps:",mcSteps);
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
-    network.initialisePotentialModel(potAK,potBK,potCK);
+    network.initialisePotentialModel(potAK,potBK,potCK,convexity);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
     network.initialiseMonteCarlo(mcTemperature,randomSeed);
+    if(lattice=="goldberg" || lattice=="inv_cubic") network.optimalProjection("sphere");
     --logfile.currIndent;
     logfile.write("Network initialised");
     logfile.separator();
@@ -136,6 +140,7 @@ int main(){
         accepted+=moveStatus[0];
         optCodes[moveStatus[1]]+=1;
         optIterations+=moveStatus[2];
+        cout<<i<<endl;
         if(i%trackFreq==0){
             double dt=logfile.timeElapsed();
             string track=to_string(accepted)+"/"+to_string(i)+" moves accepted/completed in "+to_string(dt)+" seconds";

@@ -44,7 +44,7 @@ LinkedNetwork::LinkedNetwork(string prefix) {
 }
 
 //Set up potential model with single angle and bond parameter set
-void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck) {
+void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck, int convexity) {
 
     //Make copy of lattice A coordinates
     if(networkA.geometryCode=="2DE"){
@@ -79,6 +79,12 @@ void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck) {
     //Geometry constraint parameters
     potParamsC=VecF<double>(2);
     potParamsC[0]=ck; //k, r0 updated through optimal projection
+
+    //Line intersection parameters
+    potParamsD=VecF<int>(2);
+    potParamsD[0]=1;
+    potParamsD[1]=convexity;
+
 }
 
 //Set up geometry optimisation parameters
@@ -95,7 +101,7 @@ void LinkedNetwork::initialiseGeometryOpt(int iterations, double tau, double tol
 //Set up monte carlo and random number generators
 void LinkedNetwork::initialiseMonteCarlo(double temperature, int seed) {
 
-    double energy=globalPotentialEnergy();
+    double energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     mc=Metropolis(seed,temperature,energy);
     mtGen.seed(seed);
 }
@@ -136,8 +142,8 @@ void LinkedNetwork::optimalProjection(string projType) {
                 crdsA[3*i+1]=networkA.nodes[i].crd[1];
                 crdsA[3*i+2]=networkA.nodes[i].crd[2];
             }
-            globalGeometryOptimisation();
-            energies[i]=globalPotentialEnergy();
+            globalGeometryOptimisation(false,false);
+            energies[i]=globalPotentialEnergy(false,false);
             cout<<radius<<" "<<energies[i]<<endl;
             radius+=1.0;
             crdsA=saveCrdsA;
@@ -164,8 +170,8 @@ void LinkedNetwork::optimalProjection(string projType) {
                 crdsA[3*i+2]=networkA.nodes[i].crd[2];
             }
             saveCrdsA=crdsA;
-            globalGeometryOptimisation();
-            minEnergy=globalPotentialEnergy();
+            globalGeometryOptimisation(false,false);
+            minEnergy=globalPotentialEnergy(false,false);
         }
 
         /* Refine minimimum
@@ -184,8 +190,8 @@ void LinkedNetwork::optimalProjection(string projType) {
                     crdsA[3*i+2]=networkA.nodes[i].crd[2];
                 }
                 potParamsC[1]=radius;
-                globalGeometryOptimisation();
-                e1=globalPotentialEnergy();
+                globalGeometryOptimisation(false,false);
+                e1=globalPotentialEnergy(false,false);
                 cout<<radius<<" "<<e1<<" "<<minEnergy<<endl;
                 if(e1>e0 && e0<=minEnergy){
                     lowerLim=radius-2*radiusInc;
@@ -203,7 +209,7 @@ void LinkedNetwork::optimalProjection(string projType) {
 
         //Optimise with minimum radius
         potParamsC[1]=minRadius;
-        globalGeometryOptimisation();
+        globalGeometryOptimisation(false,false);
     }
 }
 
@@ -468,11 +474,11 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     //Switch and geometry optimise
     VecF<int> optStatus;
     switchCnx(switchIdsA,switchIdsB);
-    localGeometryOptimisation(a,b,1); //bond switch atoms only
-    optStatus=localGeometryOptimisation(a,b,goptParamsA[1],true); //wider area
+    localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
+    optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]); //wider area
 
     //Accept or reject
-    energy=globalPotentialEnergy();
+    energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     int accept=mc.acceptanceCriterion(energy);
     if(accept==0){
         energy=saveEnergy;
@@ -499,7 +505,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
 
 
 //Calculate potential energy of entire system
-double LinkedNetwork::globalPotentialEnergy() {
+double LinkedNetwork::globalPotentialEnergy(bool useIntx, bool keepConvex) {
 
     /* Potential model
      * Bonds as harmonic
@@ -515,8 +521,10 @@ double LinkedNetwork::globalPotentialEnergy() {
     }
     //Intersections
     VecR<int> intersections(0,networkA.nodes.n*100);
-    for(int i=0; i<networkA.nodes.n; ++i){
-        generateIntersections(i,intersections);
+    if(useIntx){
+        for(int i=0; i<networkA.nodes.n; ++i){
+            generateIntersections(i,intersections,keepConvex);
+        }
     }
 
     //Assign to fixed size arrays
@@ -531,15 +539,16 @@ double LinkedNetwork::globalPotentialEnergy() {
     if(networkA.geometryCode=="2DE"){
         HI2DP potModel(networkA.pb[0],networkA.pb[1]);
         potModel.setBonds(bnds,bndP);
-        potModel.setIntersections(intx,intxP);
+        if(useIntx) potModel.setIntersections(intx,intxP);
         potEnergy=potModel.function(crdsA);
     }
     else if(networkA.geometryCode=="2DS"){
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
-        HLJ3DS potModel;
+        HI3DS potModel;
         potModel.setBonds(bnds,bndP);
         potModel.setGeomConstraints(constrained,potParamsC);
+        if(useIntx) potModel.setIntersections(intx,intxP);
         potEnergy=potModel.function(crdsA);
     }
 
@@ -547,7 +556,7 @@ double LinkedNetwork::globalPotentialEnergy() {
 }
 
 //Geometry optimise entire system
-void LinkedNetwork::globalGeometryOptimisation() {
+void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool keepConvex) {
 
     /* Potential model
      * Bonds as harmonic
@@ -563,8 +572,10 @@ void LinkedNetwork::globalGeometryOptimisation() {
     }
     //Intersections
     VecR<int> intersections(0,networkA.nodes.n*100);
-    for(int i=0; i<networkA.nodes.n; ++i){
-        generateIntersections(i,intersections);
+    if(useIntx){
+        for(int i=0; i<networkA.nodes.n; ++i){
+            generateIntersections(i,intersections,keepConvex);
+        }
     }
 
     //Assign to fixed size arrays
@@ -578,7 +589,7 @@ void LinkedNetwork::globalGeometryOptimisation() {
     if(networkA.geometryCode=="2DE"){
         HI2DP potModel(networkA.pb[0],networkA.pb[1]);
         potModel.setBonds(bnds,bndP);
-        potModel.setIntersections(intx,intxP);
+        if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//only optimise if no line intersections
             SteepestDescentArmijo<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
             optimiser(potModel,crdsA);
@@ -587,17 +598,20 @@ void LinkedNetwork::globalGeometryOptimisation() {
     else if(networkA.geometryCode=="2DS"){
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
-        HLJ3DS potModel;
+        HI3DS potModel;
         potModel.setBonds(bnds,bndP);
         potModel.setGeomConstraints(constrained,potParamsC);
-        SteepestDescentArmijo<HLJ3DS> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
-        optimiser(potModel,crdsA);
+        if(useIntx) potModel.setIntersections(intx,intxP);
+        if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//only optimise if no line intersections
+            SteepestDescentArmijo<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+            optimiser(potModel, crdsA);
+        }
     }
 
 }
 
 //Geometry optimise subsection of system by only including interactions in a specified range
-VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx) {
+VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx, bool keepConvex) {
 
     /* Find three regions
      * 1) local (full interactions)
@@ -617,13 +631,13 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
     }
 
     //Intersections
-    VecR<int> intersections(0,local.n*100);
+    VecR<int> intersections(0,local.n*1000);
     if(useIntx) {
         for(int i=0; i<local.n; ++i){
-            generateIntersections(local[i],intersections);
+            generateIntersections(local[i],intersections,keepConvex);
         }
         for(int i=0; i<fixedInner.n; ++i){
-            generateIntersections(fixedInner[i],intersections);
+            generateIntersections(fixedInner[i],intersections,keepConvex);
         }
     }
 
@@ -642,7 +656,7 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
         HI2DP potModel(networkA.pb[0],networkA.pb[1]);
         potModel.setBonds(bnds,bndP);
         potModel.setFixedAtoms(fixd);
-        potModel.setIntersections(intx,intxP);
+        if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//optimise if no line intersections
             SteepestDescentArmijo<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
             optStatus=optimiser(potModel,crdsA);
@@ -655,12 +669,19 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
     else if(networkA.geometryCode=="2DS"){
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
-        HLJ3DS potModel;
+        HI3DS potModel;
         potModel.setBonds(bnds,bndP);
         potModel.setFixedAtoms(fixd);
         potModel.setGeomConstraints(constrained,potParamsC);
-        SteepestDescentArmijo<HLJ3DS> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
-        optStatus=optimiser(potModel,crdsA);
+        if(useIntx) potModel.setIntersections(intx,intxP);
+        if(potModel.function(crdsA)<numeric_limits<double>::infinity()) {//optimise if no line intersections
+            SteepestDescentArmijo<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+            optStatus = optimiser(potModel, crdsA);
+        }
+        else{
+            optStatus[0]=3;
+            optStatus[1]=0;
+        }
     }
     return optStatus;
 }
@@ -703,19 +724,21 @@ void LinkedNetwork::generateHarmonics(int id, VecR<int>& bonds, VecR<double>& bo
 }
 
 //Generate intersections associated with a given node from lattice A
-void LinkedNetwork::generateIntersections(int id, VecR<int> &intersections) {
+void LinkedNetwork::generateIntersections(int id, VecR<int> &intersections, bool keepConvex) {
 
     //Maintain convexity
     int cnd=networkA.nodes[id].netCnxs.n;
     int id0,id1,id2;
-    for(int i=0; i<cnd; ++i){
-        id0=networkA.nodes[id].netCnxs[i];
-        id1=networkA.nodes[id].netCnxs[(i+1)%cnd];
-        id2=networkA.nodes[id].netCnxs[(i+2)%cnd];
-        intersections.addValue(id0);
-        intersections.addValue(id1);
-        intersections.addValue(id);
-        intersections.addValue(id2);
+    if(keepConvex) {
+        for (int i = 0; i < cnd; ++i) {
+            id0 = networkA.nodes[id].netCnxs[i];
+            id1 = networkA.nodes[id].netCnxs[(i + 1) % cnd];
+            id2 = networkA.nodes[id].netCnxs[(i + 2) % cnd];
+            intersections.addValue(id0);
+            intersections.addValue(id1);
+            intersections.addValue(id);
+            intersections.addValue(id2);
+        }
     }
 
     /* Create unique intersections with local environment
@@ -758,7 +781,8 @@ void LinkedNetwork::generateIntersections(int id, VecR<int> &intersections) {
                     l1a=edges[l];
                     l1b=edges[k];
                 }
-                if(l0a<l1a) {//prevent double counting
+                if(true==true){
+//                if(l0a<l1a) {//prevent double counting
                     intersections.addValue(l0a);
                     intersections.addValue(l0b);
                     intersections.addValue(l1a);

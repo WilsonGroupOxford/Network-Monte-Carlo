@@ -136,7 +136,10 @@ void VecR<T>::insertValue(T vInsert, T vBetween0, T vBetween1) {
         }
         if(insert) break;
     }
-    if(!insert) throw "Cannot insert value as surrounding values not present in vector";
+    if(!insert){
+        for(int i=0; i<this->n; ++i) cout<<this->v[i]<<endl;
+        throw "Cannot insert value as surrounding values not present in vector";
+    }
     for(int i=this->n; i>insertPos; --i) this->v[i]=this->v[i-1];
     this->v[insertPos]=vInsert;
     ++this->n;

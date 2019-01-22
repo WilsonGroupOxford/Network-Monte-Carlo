@@ -2,27 +2,28 @@ I/0
 ./output_files/testt         output prefix
 --------------------------------------------------
 Network Properties
-900         number of rings
+100         number of rings
 3           min ring size
 20          max ring size
-hexagonal      lattice (square,hexagonal...)
+hexagonal      lattice (square,hexagonal,goldberg,inv_cubic)
 --------------------------------------------------
 Monte Carlo Process
 0           random seed
-10.01         temperature
-1000       steps
+1000        temperature
+422      steps
 --------------------------------------------------
 Potential Model
 1.0         harmonic bond force constant
 0.2         harmonic angle force constant
 10.0        harmonic geometry constraint
+0           maintain ring convexity
 --------------------------------------------------
 Geometry Optimisation
 1000        monte carlo local max iterations
 1           global minimisation max iterations
 0.5         tau backtracking parameter
 1e-07       tolerance
-10          local region size
+2       local region size
 --------------------------------------------------
 Analysis
 10          write frequency
