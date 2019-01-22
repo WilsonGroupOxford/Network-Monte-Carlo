@@ -10,7 +10,7 @@ hexagonal      lattice (square,hexagonal,goldberg,inv_cubic)
 Monte Carlo Process
 0           random seed
 1000        temperature
-422      steps
+1000      steps
 --------------------------------------------------
 Potential Model
 1.0         harmonic bond force constant

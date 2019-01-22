@@ -136,6 +136,9 @@ int main(){
     VecF<int> moveStatus;
     double energy;
     for(int i=1; i<=mcSteps; ++i){
+        if(i==954){
+            int debug=1;
+        }
         moveStatus=network.monteCarloSwitchMove(energy);
         accepted+=moveStatus[0];
         optCodes[moveStatus[1]]+=1;
@@ -164,6 +167,8 @@ int main(){
             outEnergy.write(energy);
             outEntropy.writeRowVector(s);
         }
+        cout<<" + "<<network.checkCnxConsistency()<<endl;
+        cout<<" + "<<network.checkDescriptorConsistency()<<endl;
     }
     --logfile.currIndent;
     logfile.write("Monte Carlo complete");

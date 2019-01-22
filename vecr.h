@@ -33,6 +33,7 @@ public:
     void addValue(T value); //add value to end
     void delValue(T value); //remove first instance of value from vector
     void swapValue(T vDel, T vAdd, bool swapAll=true); //swap a value in place of another
+    void swapValue(T vDel, T vAdd, T vBetween0, T vBetween1); //swap value in place of another at specific point
     void insertValue(T vInsert, T vBetween0, T vBetween1); //insert a value between two others
 
     //Subscript operator

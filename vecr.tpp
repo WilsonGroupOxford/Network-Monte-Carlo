@@ -119,6 +119,58 @@ void VecR<T>::swapValue(T vDel, T vAdd, bool swapAll) {
     if(!swap) throw "Cannot swap value as not present in vector";
 }
 
+template <typename T>
+void VecR<T>::swapValue(T vDel, T vAdd, T vBetween0, T vBetween1) {
+    bool swap=false;
+    int i,j,k;
+    i=0;
+    j=this->n-1;
+    k=1;
+    if(equals(this->v[i],vDel)){
+        if(equals(this->v[j],vBetween0) && equals(this->v[k],vBetween1)){
+            this->v[i]=vAdd;
+            swap=true;
+        }
+        else if(equals(this->v[j],vBetween1) && equals(this->v[k],vBetween0)){
+            this->v[i]=vAdd;
+            swap=true;
+        }
+    }
+    if(swap) return;
+
+    for(int i=1, j=0, k=2; i<this->n-1; ++i,++j,++k){
+        if(equals(this->v[i],vDel)){
+            if(equals(this->v[j],vBetween0) && equals(this->v[k],vBetween1)){
+                this->v[i]=vAdd;
+                swap=true;
+                break;
+            }
+            else if(equals(this->v[j],vBetween1) && equals(this->v[k],vBetween0)){
+                this->v[i]=vAdd;
+                swap=true;
+                break;
+            }
+        }
+
+    }
+    if(swap) return;
+
+    i=this->n-1;
+    j=this->n-2;
+    k=0;
+    if(equals(this->v[i],vDel)){
+        if(equals(this->v[j],vBetween0) && equals(this->v[k],vBetween1)){
+            this->v[i]=vAdd;
+            swap=true;
+        }
+        else if(equals(this->v[j],vBetween1) && equals(this->v[k],vBetween0)){
+            this->v[i]=vAdd;
+            swap=true;
+        }
+    }
+    if(!swap) throw "Cannot swap value between values as sequence not present in vector";
+}
+
 //Insert value in vector between two others
 template <typename T>
 void VecR<T>::insertValue(T vInsert, T vBetween0, T vBetween1) {

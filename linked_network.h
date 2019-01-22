@@ -45,9 +45,10 @@ public:
     void rescale(double scaleFactor); //rescale lattice dimensions
     void project(string projType, double param); //project lattice onto different geometry
     void optimalProjection(string projType); //project lattice onto different geometry with optimal parameters
-    void randomCnx(int& a, int& b, int& u, int& v, mt19937& gen); //choose nodes forming random edge in lattice A, and corresponding nodes in lattice B
-    int generateSwitchIds(VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u=-1, int v=-1); //get all ids of nodes in lattice A and B needed for switch move
-    void switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice
+    int randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen); //choose nodes forming random edge in lattice A, and corresponding nodes in lattice B
+    int generateSwitchIds34(int cnxType, VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for switch move
+    void switchCnx33(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
+    void switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
     double globalPotentialEnergy(bool useIntx, bool keepConvex); //calculate potential energy of entire system
     void globalGeometryOptimisation(bool useIntx, bool keepConvex); //geometry optimise entire system
