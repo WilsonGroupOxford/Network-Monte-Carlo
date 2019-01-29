@@ -25,6 +25,8 @@ public:
     Metropolis(int seed, double temperature, double energy=0.0);
 
     //Member functions
+    void setEnergy(double energy);
+    void setTemperature(double temperature);
     int acceptanceCriterion(double energy);
 };
 

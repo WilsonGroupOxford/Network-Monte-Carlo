@@ -30,6 +30,7 @@ int main(){
     //Network properties
     int nRings,minRingSize,maxRingSize;
     string lattice;
+    string crystal;
     getline(inputFile,line);
     istringstream(line)>>nRings;
     getline(inputFile,line);
@@ -38,18 +39,26 @@ int main(){
     istringstream(line)>>maxRingSize;
     getline(inputFile,line);
     istringstream(line)>>lattice;
+    getline(inputFile,line);
+    istringstream(line)>>crystal;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Network properties read");
     //Monte carlo
-    int randomSeed,mcSteps;
-    double mcTemperature;
+    int randomSeed,mcSteps,equilSteps;
+    double mcStartT,mcEndT,mcIncT;
     getline(inputFile,line);
     istringstream(line)>>randomSeed;
     getline(inputFile,line);
-    istringstream(line)>>mcTemperature;
+    istringstream(line)>>mcStartT;
+    getline(inputFile,line);
+    istringstream(line)>>mcEndT;
+    getline(inputFile,line);
+    istringstream(line)>>mcIncT;
     getline(inputFile,line);
     istringstream(line)>>mcSteps;
+    getline(inputFile,line);
+    istringstream(line)>>equilSteps;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Monte Carlo parameters read");
@@ -100,12 +109,16 @@ int main(){
     logfile.write("Number of rings:",nRings);
     logfile.write("Min ring size:",minRingSize);
     logfile.write("Max ring size:",maxRingSize);
-    logfile.write("Monte carlo temperature:",mcTemperature);
-    logfile.write("Monte carlo steps:",mcSteps);
+    logfile.write("Monte carlo initial log temperature:",mcStartT);
+    logfile.write("Monte carlo final log temperature:",mcEndT);
+    logfile.write("Monte carlo log temperature increment:",mcIncT);
+    logfile.write("Monte carlo steps per increment:",mcSteps);
+    logfile.write("Equilibrium steps:",equilSteps);
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
     network.initialisePotentialModel(potAK,potBK,potCK,convexity);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
-    network.initialiseMonteCarlo(mcTemperature,randomSeed);
+    network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed);
+    if(crystal!="default") network.makeCrystal(crystal,lattice);
     if(lattice=="goldberg" || lattice=="inv_cubic") network.optimalProjection("sphere");
     --logfile.currIndent;
     logfile.write("Network initialised");
@@ -118,60 +131,109 @@ int main(){
     OutputFile outCorr(prefixOut+"_correlations.out");
     OutputFile outEnergy(prefixOut+"_energy.out");
     OutputFile outEntropy(prefixOut+"_entropy.out");
+    OutputFile outTemperature(prefixOut+"_temperature.out");
     logfile.write("Ring statistics file created");
     logfile.write("Correlations file created");
     logfile.write("Energy file created");
     logfile.write("Entropy file created");
+    logfile.write("Temperature file created");
     --logfile.currIndent;
     logfile.write("Files initialised");
     logfile.separator();
 
-    //Perform monte carlo simulation
-    logfile.write("Running Monte Carlo");
+    //Run monte carlo equilibrium
+    logfile.write("Running Monte Carlo equilibration");
     ++logfile.currIndent;
     int accepted=0,optIterations=0;
     VecF<int> optCodes(4);
     optCodes=0;
-    int trackFreq=1000;
+    int trackFreq=100;
     VecF<int> moveStatus;
     double energy;
-    for(int i=1; i<=mcSteps; ++i){
-        if(i==954){
-            int debug=1;
-        }
-        moveStatus=network.monteCarloSwitchMove(energy);
-        accepted+=moveStatus[0];
-        optCodes[moveStatus[1]]+=1;
-        optIterations+=moveStatus[2];
-        cout<<i<<endl;
-        if(i%trackFreq==0){
-            double dt=logfile.timeElapsed();
-            string track=to_string(accepted)+"/"+to_string(i)+" moves accepted/completed in "+to_string(dt)+" seconds";
+    double mcT=pow(10,mcStartT);
+    for (int i = 1; i <= equilSteps; ++i) {
+        moveStatus = network.monteCarloSwitchMove(energy);
+        accepted += moveStatus[0];
+        optCodes[moveStatus[1]] += 1;
+        optIterations += moveStatus[2];
+//        cout << i << endl;
+        if (i % trackFreq == 0) {
+            double dt = logfile.timeElapsed();
+            string track =
+                    to_string(accepted) + "/" + to_string(i) + " moves accepted/completed in " + to_string(dt) +
+                    " seconds";
             logfile.write(track);
-            cout<<i<<" "<<accepted<<endl;
+            cout << "e" << " " << i << " " << accepted << endl;
         }
-        if(i%analysisFreq==0){
-            VecF<double> ringStats=network.getNodeDistribution("B");
-            double r=network.getAssortativity("B");
-            double aEst=network.getAboavWeaireEstimate("B");
-            VecF<double> aw=network.getAboavWeaire("B");
-            VecF<double> s=network.getEntropy("B");
+        if (i % analysisFreq == 0) {
+            VecF<double> ringStats = network.getNodeDistribution("B");
+            double r = network.getAssortativity("B");
+            double aEst = network.getAboavWeaireEstimate("B");
+            VecF<double> aw = network.getAboavWeaire("B");
+            VecF<double> s = network.getEntropy("B");
             VecF<double> corr(5);
-            corr[0]=r;
-            corr[1]=aEst;
-            corr[2]=aw[0];
-            corr[3]=aw[1];
-            corr[4]=aw[2];
+            corr[0] = r;
+            corr[1] = aEst;
+            corr[2] = aw[0];
+            corr[3] = aw[1];
+            corr[4] = aw[2];
             outRingStats.writeRowVector(ringStats);
             outCorr.writeRowVector(corr);
             outEnergy.write(energy);
             outEntropy.writeRowVector(s);
+            outTemperature.write(mcT);
         }
-        cout<<" + "<<network.checkCnxConsistency()<<endl;
-        cout<<" + "<<network.checkDescriptorConsistency()<<endl;
     }
     --logfile.currIndent;
-    logfile.write("Monte Carlo complete");
+    logfile.write("Monte Carlo equilibration complete");
+    logfile.separator();
+
+    //Perform monte carlo simulation
+    logfile.write("Running Monte Carlo simulation");
+    ++logfile.currIndent;
+    int nT=(mcEndT-mcStartT)/mcIncT;
+    for(int t=0; t<=nT; ++t) {
+        mcT=pow(10,mcStartT+t*mcIncT);
+        network.mc.setTemperature(mcT);
+        logfile.write("Temperature:",mcT);
+        ++logfile.currIndent;
+        for (int i = 1; i <= mcSteps; ++i) {
+            moveStatus = network.monteCarloSwitchMove(energy);
+            accepted += moveStatus[0];
+            optCodes[moveStatus[1]] += 1;
+            optIterations += moveStatus[2];
+//            cout << i << endl;
+            if (i % trackFreq == 0) {
+                double dt = logfile.timeElapsed();
+                string track =
+                        to_string(accepted) + "/" + to_string(i) + " moves accepted/completed in " + to_string(dt) +
+                        " seconds";
+                logfile.write(track);
+                cout << t << " " << i << " " << accepted << endl;
+            }
+            if (i % analysisFreq == 0) {
+                VecF<double> ringStats = network.getNodeDistribution("B");
+                double r = network.getAssortativity("B");
+                double aEst = network.getAboavWeaireEstimate("B");
+                VecF<double> aw = network.getAboavWeaire("B");
+                VecF<double> s = network.getEntropy("B");
+                VecF<double> corr(5);
+                corr[0] = r;
+                corr[1] = aEst;
+                corr[2] = aw[0];
+                corr[3] = aw[1];
+                corr[4] = aw[2];
+                outRingStats.writeRowVector(ringStats);
+                outCorr.writeRowVector(corr);
+                outEnergy.write(energy);
+                outEntropy.writeRowVector(s);
+                outTemperature.write(mcT);
+            }
+        }
+        --logfile.currIndent;
+    }
+    --logfile.currIndent;
+    logfile.write("Monte Carlo simulation complete");
     logfile.separator();
 
     //Check network

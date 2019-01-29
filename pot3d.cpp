@@ -380,6 +380,7 @@ double HI3DS::intPotential(double &x0, double &y0, double &z0, double &x1, doubl
     p3[0]=x3;
     p3[1]=y3;
     p3[2]=z3;
+    if(p0==p2 || p0==p3 || p1==p2 || p1==p3) return 0.0;
     p0/=vNorm(p0);
     p1/=vNorm(p1);
     p2/=vNorm(p2);

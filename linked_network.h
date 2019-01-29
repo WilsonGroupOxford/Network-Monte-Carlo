@@ -42,19 +42,21 @@ public:
     void initialisePotentialModel(double ak, double bk, double ck=0.0, int convexity=1); //set up potential model
     void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters
     void initialiseMonteCarlo(double temperature, int seed=0); //set up monte carlo
+    void makeCrystal(string crystalCode, string lattice); //perform defined moves to make specific crystal
     void rescale(double scaleFactor); //rescale lattice dimensions
     void project(string projType, double param); //project lattice onto different geometry
     void optimalProjection(string projType); //project lattice onto different geometry with optimal parameters
     int randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen); //choose nodes forming random edge in lattice A, and corresponding nodes in lattice B
     int generateSwitchIds34(int cnxType, VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for switch move
     void switchCnx33(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
-    void switchCnx(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
+    void switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x4 coordinate nodes
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
     double globalPotentialEnergy(bool useIntx, bool keepConvex); //calculate potential energy of entire system
     void globalGeometryOptimisation(bool useIntx, bool keepConvex); //geometry optimise entire system
     VecF<int> localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx, bool keepConvex); //geometry optimise subsection of system
     void generateHarmonics(int id, VecR<int>& bonds, VecR<double>& bondParams); //generate harmonic interactions
-    void generateIntersections(int id, VecR<int>& intersections, bool keepConvex); //generate intersection interactions
+    void generateRingIntersections(int rId, VecR<int>& intersections); //generate ring intersection interactions
+    void generateConvexIntersections(int nId, VecR<int>& intersections); //generate convex ring intersection interactions
     void wrapCoordinates(); //wrap coordinates if periodic
     void syncCoordinates(); //update geometry optimised coordinates to networks
     VecF<double> getNodeDistribution(string lattice); //get proportion of nodes of each size

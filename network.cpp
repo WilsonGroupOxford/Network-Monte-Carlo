@@ -37,7 +37,7 @@ void Network::initialiseDescriptors(int maxCnxs) {
     //Double count number of each edge type and add to vector
     for(int i=0; i<nodes.n; ++i){
         for(int j=0; j<nodes[i].netCnxs.n; ++j){
-            ++edgeDistribution[nodes[i].netCnxs.n][nodes[j].netCnxs.n];
+            ++edgeDistribution[nodes[i].netCnxs.n][nodes[nodes[i].netCnxs[j]].netCnxs.n];
         }
     }
 }

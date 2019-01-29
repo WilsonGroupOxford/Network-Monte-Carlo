@@ -19,6 +19,16 @@ Metropolis::Metropolis(int seed, double temperature, double energy) {
     energyPrev=energy;
 }
 
+//Set energy
+void Metropolis::setEnergy(double energy) {
+    energyPrev=energy;
+}
+
+//Set temperature
+void Metropolis::setTemperature(double temperature) {
+    rTemperature=1.0/temperature;
+}
+
 //Evaluate Metropolis condition, whether to accept or reject move
 int Metropolis::acceptanceCriterion(double energy) {
 

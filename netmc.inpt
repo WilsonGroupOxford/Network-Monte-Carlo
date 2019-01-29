@@ -1,16 +1,20 @@
 I/0
-./output_files/testt         output prefix
+./output_files/test        output prefix
 --------------------------------------------------
 Network Properties
-100         number of rings
-3           min ring size
-20          max ring size
+400         number of rings
+5           min ring size
+7          max ring size
 hexagonal      lattice (square,hexagonal,goldberg,inv_cubic)
+var1         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
 0           random seed
-1000        temperature
-1000      steps
+-6          start temperature (10^x)
+2          end temperature (10^x)
+1           temperature increment (10^x)
+10          steps per temperature
+1000           initial equilibration steps
 --------------------------------------------------
 Potential Model
 1.0         harmonic bond force constant
@@ -26,5 +30,5 @@ Geometry Optimisation
 2       local region size
 --------------------------------------------------
 Analysis
-10          write frequency
+1          write frequency
 --------------------------------------------------
