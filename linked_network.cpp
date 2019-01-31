@@ -106,6 +106,16 @@ void LinkedNetwork::initialiseMonteCarlo(double temperature, int seed) {
     mtGen.seed(seed);
 }
 
+//Set up cost function parameters and monte carlo
+void LinkedNetwork::initialiseCostFunction(double temperature, int seed, double pk, double rk) {
+
+    costParams=VecF<double>(2);
+    costParams[0]=pk;
+    costParams[1]=rk;
+    double cost=numeric_limits<double>::infinity();
+    mcCost=Metropolis(seed+1,temperature,cost);
+}
+
 //Rescale lattice dimensions
 void LinkedNetwork::rescale(double scaleFactor) {
     networkA.rescale(scaleFactor);
@@ -801,6 +811,84 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     return status;
 }
 
+//Single monte carlo switching move based on cost function
+VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, double pTarget, double rTarget) {
+
+    /* Single MC switch move
+     * 1) select random connection
+     * 2) switch connection
+     * 3) optimise and evaluate cost
+     * 4) accept or reject */
+
+    //Select valid random connection - that will not violate connection limits
+    int a,b,u,v;
+    VecF<int> switchIdsA, switchIdsB;
+    int validMove;
+    int cnxType;
+    for(int i=0; i<networkA.nodes.n*networkA.nodes.n; ++i){//catch in case cannot find any valid moves
+        cnxType=randomCnx34(a,b,u,v,mtGen);
+        validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
+        if(validMove==0) break;
+    }
+    if(validMove==1) throw "Cannot find any valid switch moves";
+
+    //Save current state
+    double saveCost=cost;
+    double saveEnergy=energy;
+    VecF<double> saveCrdsA=crdsA;
+    VecF<int> saveNodeDistA=networkA.nodeDistribution;
+    VecF<int> saveNodeDistB=networkB.nodeDistribution;
+    VecF< VecF<int> > saveEdgeDistA=networkA.edgeDistribution;
+    VecF< VecF<int> > saveEdgeDistB=networkB.edgeDistribution;
+    VecF<Node> saveNodesA(switchIdsA.n), saveNodesB(switchIdsB.n);
+    for(int i=0; i<saveNodesA.n; ++i) saveNodesA[i]=networkA.nodes[switchIdsA[i]];
+    for(int i=0; i<saveNodesB.n; ++i) saveNodesB[i]=networkB.nodes[switchIdsB[i]];
+
+    //Switch, evaluate cost and geometry optimise
+    VecF<int> optStatus;
+    if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
+    else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
+    else throw "Not yet implemented!";
+    cost=costFunction(pTarget,rTarget);
+    localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
+    optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]); //wider area
+
+    //Make sure not infinite energy the accept or reject
+    int accept;
+    energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
+    if(energy==numeric_limits<double>::infinity()) accept=0;
+    if(accept!=0) accept=mcCost.acceptanceCriterion(cost);
+    if(accept==0){
+        energy=saveEnergy;
+        crdsA=saveCrdsA;
+        networkA.nodeDistribution=saveNodeDistA;
+        networkA.edgeDistribution=saveEdgeDistA;
+        networkB.nodeDistribution=saveNodeDistB;
+        networkB.edgeDistribution=saveEdgeDistB;
+        for(int i=0; i<saveNodesA.n; ++i) networkA.nodes[switchIdsA[i]]=saveNodesA[i];
+        for(int i=0; i<saveNodesB.n; ++i) networkB.nodes[switchIdsB[i]]=saveNodesB[i];
+    }
+
+    /* Status report
+     * [0] accepted/rejected 1/0
+     * [1] optimisation code 0=successful 1=successful(zero force) 2=unsuccessful(it limit) 3=unsuccessful(intersection)
+     * [2] optimisation iterations */
+    VecF<int> status(3);
+    status[0]=accept;
+    status[1]=optStatus[0];
+    status[2]=optStatus[1];
+
+    return status;
+}
+
+//Cost fuctional based on ring statistics and assortative mixing
+double LinkedNetwork::costFunction(double &pTarget, double &rTarget) {
+
+    double p6=getNodeDistribution("B")[6];
+    double r=getAssortativity("B");
+    double cost=costParams[0]*abs(p6-pTarget)+costParams[1]*abs(r-rTarget);
+    return cost;
+}
 
 //Calculate potential energy of entire system
 double LinkedNetwork::globalPotentialEnergy(bool useIntx, bool keepConvex) {

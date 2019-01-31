@@ -24,11 +24,12 @@ public:
     Network networkA, networkB; //two reciprocal networks
     VecF<double> crdsA; //copy of coordinates in network A (for efficient geometry optimisation)
     mt19937 mtGen; //mersenne twister random number generator
-    Metropolis mc; //monte carlo metropolis condition
+    Metropolis mc,mcCost; //monte carlo metropolis condition
     VecF<double> potParamsA,potParamsB,potParamsC; //potetial model parameters (angles, bonds, constraints)
     VecF<int> potParamsD; //potential model intersection parameters
     VecF<int> goptParamsA; //geometry optimisation parameters
     VecF<double> goptParamsB; //geometry optimisation parameters
+    VecF<double> costParams; //cost function parameters
 
     //Additional data members
     int minNodeCnxs;
@@ -42,6 +43,7 @@ public:
     void initialisePotentialModel(double ak, double bk, double ck=0.0, int convexity=1); //set up potential model
     void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters
     void initialiseMonteCarlo(double temperature, int seed=0); //set up monte carlo
+    void initialiseCostFunction(double temperature, int seed, double pk, double rk); //set up cost function
     void makeCrystal(string crystalCode, string lattice); //perform defined moves to make specific crystal
     void rescale(double scaleFactor); //rescale lattice dimensions
     void project(string projType, double param); //project lattice onto different geometry
@@ -51,6 +53,8 @@ public:
     void switchCnx33(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
     void switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x4 coordinate nodes
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
+    VecF<int> monteCarloCostSwitchMove(double& cost, double& energy, double pTarget, double rTarget); //monte carlo switching move with cost function
+    double costFunction(double& pTarget, double& rTarget); //cost function based on ring statistics and assortative mixing
     double globalPotentialEnergy(bool useIntx, bool keepConvex); //calculate potential energy of entire system
     void globalGeometryOptimisation(bool useIntx, bool keepConvex); //geometry optimise entire system
     VecF<int> localGeometryOptimisation(int centreA, int centreB, int extent, bool useIntx, bool keepConvex); //geometry optimise subsection of system

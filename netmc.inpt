@@ -1,5 +1,5 @@
 I/0
-./output_files/test        output prefix
+./output_files/testt        output prefix
 --------------------------------------------------
 Network Properties
 400         number of rings
@@ -9,12 +9,31 @@ hexagonal      lattice (square,hexagonal,goldberg,inv_cubic)
 var1         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
+cost      run type (energy,cost)
 0           random seed
+--------------------------------------------------
+Monte Carlo Energy Search
 -6          start temperature (10^x)
-2          end temperature (10^x)
+-6          end temperature (10^x)
 1           temperature increment (10^x)
 10          steps per temperature
-1000           initial equilibration steps
+10           initial equilibration steps
+--------------------------------------------------
+Monte Carlo Cost Search
+0         randomisation steps
+0.1         p lower limit
+0.9         p upper limit
+0.01        p increment
+-0.4        r lower limit
+0.4         r upper limit
+0.01        r increment
+1000         steps for initial search
+50        steps per search
+0.0000001        effective temperature
+--------------------------------------------------
+Cost Function
+1.0         p constant
+1.0        r constant
 --------------------------------------------------
 Potential Model
 1.0         harmonic bond force constant
