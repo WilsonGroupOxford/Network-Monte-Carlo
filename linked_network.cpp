@@ -209,7 +209,7 @@ void LinkedNetwork::optimalProjection(string projType) {
                 id0=i;
             }
         }
-        if(id0==searchLim-1) throw "Initial spherical minimisation reached search limit";
+        if(id0==searchLim-1) throw string("Initial spherical minimisation reached search limit");
         else{
             lowerLim=id0-1.0;
             minRadius=id0;
@@ -254,7 +254,7 @@ void LinkedNetwork::optimalProjection(string projType) {
                 }
                 else e0=e1;
                 radius+=radiusInc;
-                if(radius>upperLim) throw "Could not find minimum in initial spherical minimisation";
+                if(radius>upperLim) throw string("Could not find minimum in initial spherical minimisation");
             }
             radiusInc/=10.0;
         }
@@ -298,15 +298,22 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         a=n1;
         b=n0;
     }
-    else throw "Error in random connection - incorrect coordinations";
+    else throw string("Error in random connection - incorrect coordinations");
 
     //get nodes in dual in random orientation
     uniform_int_distribution<int> randomDirection(0,1);
     VecR<int> common=vCommonValues(networkA.nodes[a].dualCnxs,networkA.nodes[b].dualCnxs);
-    if(common.n!=2) throw "Error in random connection - incorrect dual ids";
-    int randIndex=randomDirection(gen);
-    u=common[randIndex];
-    v=common[1-randIndex];
+    if(common.n==2){
+        int randIndex=randomDirection(gen);
+        u=common[randIndex];
+        v=common[1-randIndex];
+    }
+    else throw string("Error in random connection - incorrect dual ids");
+//    else{//will get thrown out when generating ids
+//        cout<<"Note: error in random connection - incorrect dual ids"<<endl;
+//        u=common[0];
+//        v=common[0];
+//    }
 
     return cnxType;
 }
@@ -368,8 +375,12 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         if(common.n!=1 || common1.n!=1 || common[0]!=common1[0]) errorFlag=5;
         x=common[0];
 
+        //Additional error checking including preventing two nodes connecting multiple times
+        if(c==d || e==f) errorFlag=6;
+        if(vContains(networkB.nodes[w].netCnxs,x)) errorFlag=7;
+
         if(errorFlag!=0){
-            cout<<"Note: skip in switch generation"<<endl;
+            cout<<"Note: skip in switch generation 33 with code "<<errorFlag<<endl;
             return 1;
         }
 
@@ -463,7 +474,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         h=common[0];
 
         if(errorFlag!=0){
-            cout<<"Note: skip in switch generation"<<endl;
+            cout<<"Note: skip in switch generation 44"<<endl;
             return 1;
         }
 
@@ -493,7 +504,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
 
 
     }
-    else if(cnxType==34) throw "Not yet implemented!";
+    else if(cnxType==34) throw string("Not yet implemented!");
     return 0;
 }
 
@@ -763,7 +774,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
-    if(validMove==1) throw "Cannot find any valid switch moves";
+    if(validMove==1) throw string("Cannot find any valid switch moves");
 
     //Save current state
     double saveEnergy=energy;
@@ -780,7 +791,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     VecF<int> optStatus;
     if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
-    else throw "Not yet implemented!";
+    else throw string("Not yet implemented!");
     localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
     optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]); //wider area
 
@@ -830,7 +841,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
-    if(validMove==1) throw "Cannot find any valid switch moves";
+    if(validMove==1) throw string("Cannot find any valid switch moves");
 
     //Save current state
     double saveCost=cost;
@@ -848,7 +859,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
     VecF<int> optStatus;
     if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
-    else throw "Not yet implemented!";
+    else throw string("Not yet implemented!");
     cost=costFunction(pTarget,rTarget);
     localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
     optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]); //wider area

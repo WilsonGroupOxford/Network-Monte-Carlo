@@ -12,7 +12,7 @@ VecF<T>::VecF() {
 //Construct with size
 template <typename T>
 VecF<T>::VecF(int size) {
-    if(size<0) throw "Vector cannot be instantiated with negative size";
+    if(size<0) throw string("Vector cannot be instantiated with negative size");
     this->n = size;
     this->v = new T[this->n]();
 }
@@ -40,7 +40,7 @@ bool VecF<T>::equals(const T& a, const T& b) {
 //Subscript operator
 template <typename T>
 T& VecF<T>::operator[](int i) {
-    if(this->n<=i) throw "Vector subscript out of bounds";
+    if(this->n<=i) throw string("Vector subscript out of bounds");
     return this->v[i];
 }
 
@@ -128,25 +128,25 @@ VecF<T> VecF<T>::operator/(const T& k) {
 //Binary operators with VecF
 template <typename T>
 void VecF<T>::operator+=(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] += source.v[i];
 }
 
 template <typename T>
 void VecF<T>::operator-=(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] -= source.v[i];
 }
 
 template <typename T>
 void VecF<T>::operator*=(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] *= source.v[i];
 }
 
 template <typename T>
 void VecF<T>::operator/=(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] /= source.v[i];
 }
 
@@ -175,7 +175,7 @@ VecF<T>& VecF<T>::operator=(const VecF& source) {
 
 template <typename T>
 VecF<T> VecF<T>::operator+(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecF<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]+source.v[i];
     return vec;
@@ -183,7 +183,7 @@ VecF<T> VecF<T>::operator+(const VecF& source) {
 
 template <typename T>
 VecF<T> VecF<T>::operator-(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecF<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]-source.v[i];
     return vec;
@@ -191,7 +191,7 @@ VecF<T> VecF<T>::operator-(const VecF& source) {
 
 template <typename T>
 VecF<T> VecF<T>::operator*(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecF<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]*source.v[i];
     return vec;
@@ -199,7 +199,7 @@ VecF<T> VecF<T>::operator*(const VecF& source) {
 
 template <typename T>
 VecF<T> VecF<T>::operator/(const VecF& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecF<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]/source.v[i];
     return vec;

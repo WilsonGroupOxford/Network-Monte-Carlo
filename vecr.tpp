@@ -13,7 +13,7 @@ VecR<T>::VecR() {
 //Construct with maximum size
 template <typename T>
 VecR<T>::VecR(int maxSize) {
-    if(maxSize<0) throw "Vector cannot be instantiated with negative size";
+    if(maxSize<0) throw string("Vector cannot be instantiated with negative size");
     this->n = maxSize;
     this->nMax = maxSize;
     this->v = new T[this->nMax]();
@@ -22,7 +22,7 @@ VecR<T>::VecR(int maxSize) {
 //Construct with size and maximum size
 template <typename T>
 VecR<T>::VecR(int size, int maxSize) {
-    if(maxSize<0) throw "Vector cannot be instantiated with negative size";
+    if(maxSize<0) throw string("Vector cannot be instantiated with negative size");
     this->n = size;
     this->nMax = maxSize;
     this->v = new T[this->nMax]();
@@ -52,7 +52,7 @@ bool VecR<T>::equals(const T& a, const T& b) {
 //Set current size of vector
 template <typename T>
 void VecR<T>::setSize(int size) {
-    if(size>this->nMax) throw "Cannot set vector size larger than reserved size";
+    if(size>this->nMax) throw string("Cannot set vector size larger than reserved size");
     this->n = size;
 }
 
@@ -73,7 +73,7 @@ void VecR<T>::resetMaxSize(int maxSize) {
 //Add value to end of vector
 template <typename T>
 void VecR<T>::addValue(T value) {
-    if(this->n == this->nMax) throw "Cannot add to vector to make larger than reserved size";
+    if(this->n == this->nMax) throw string("Cannot add to vector to make larger than reserved size");
     this->v[this->n] = value;
     ++this->n;
 }
@@ -90,7 +90,7 @@ void VecR<T>::delValue(T value) {
             break;
         }
     }
-    if(!del) throw "Cannot delete value as not present in vector";
+    if(!del) throw string("Cannot delete value as not present in vector");
     for(int i=d; i<this->n-1; ++i) this->v[i]=this->v[i+1];
     --this->n;
 }
@@ -116,7 +116,7 @@ void VecR<T>::swapValue(T vDel, T vAdd, bool swapAll) {
             }
         }
     }
-    if(!swap) throw "Cannot swap value as not present in vector";
+    if(!swap) throw string("Cannot swap value as not present in vector");
 }
 
 template <typename T>
@@ -168,13 +168,13 @@ void VecR<T>::swapValue(T vDel, T vAdd, T vBetween0, T vBetween1) {
             swap=true;
         }
     }
-    if(!swap) throw "Cannot swap value between values as sequence not present in vector";
+    if(!swap) throw string("Cannot swap value between values as sequence not present in vector");
 }
 
 //Insert value in vector between two others
 template <typename T>
 void VecR<T>::insertValue(T vInsert, T vBetween0, T vBetween1) {
-    if(this->n == this->nMax) throw "Cannot insert to vector to make larger than reserved size";
+    if(this->n == this->nMax) throw string("Cannot insert to vector to make larger than reserved size");
     bool insert=false;
     int insertPos=-1;
     for(int i=0; i<this->n; ++i){
@@ -190,7 +190,7 @@ void VecR<T>::insertValue(T vInsert, T vBetween0, T vBetween1) {
     }
     if(!insert){
         for(int i=0; i<this->n; ++i) cout<<this->v[i]<<endl;
-        throw "Cannot insert value as surrounding values not present in vector";
+        throw string("Cannot insert value as surrounding values not present in vector");
     }
     for(int i=this->n; i>insertPos; --i) this->v[i]=this->v[i-1];
     this->v[insertPos]=vInsert;
@@ -200,7 +200,7 @@ void VecR<T>::insertValue(T vInsert, T vBetween0, T vBetween1) {
 //Subscript operator
 template <typename T>
 T& VecR<T>::operator[](int i) {
-    if(this->n<=i) throw "Vector subscript out of bounds";
+    if(this->n<=i) throw string("Vector subscript out of bounds");
     return this->v[i];
 }
 
@@ -288,25 +288,25 @@ VecR<T> VecR<T>::operator/(const T& k) {
 //Binary operators with VecR
 template <typename T>
 void VecR<T>::operator+=(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] += source.v[i];
 }
 
 template <typename T>
 void VecR<T>::operator-=(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] -= source.v[i];
 }
 
 template <typename T>
 void VecR<T>::operator*=(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] *= source.v[i];
 }
 
 template <typename T>
 void VecR<T>::operator/=(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     for (int i = 0; i < this->n; ++i) this->v[i] /= source.v[i];
 }
 
@@ -336,7 +336,7 @@ VecR<T>& VecR<T>::operator=(const VecR& source) {
 
 template <typename T>
 VecR<T> VecR<T>::operator+(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecR<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]+source.v[i];
     return vec;
@@ -344,7 +344,7 @@ VecR<T> VecR<T>::operator+(const VecR& source) {
 
 template <typename T>
 VecR<T> VecR<T>::operator-(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecR<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]-source.v[i];
     return vec;
@@ -352,7 +352,7 @@ VecR<T> VecR<T>::operator-(const VecR& source) {
 
 template <typename T>
 VecR<T> VecR<T>::operator*(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecR<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]*source.v[i];
     return vec;
@@ -360,7 +360,7 @@ VecR<T> VecR<T>::operator*(const VecR& source) {
 
 template <typename T>
 VecR<T> VecR<T>::operator/(const VecR& source) {
-    if(this->n != source.n) throw "Cannot perform binary operation on vectors of different sizes";
+    if(this->n != source.n) throw string("Cannot perform binary operation on vectors of different sizes");
     VecR<T> vec(this->n);
     for(int i=0; i<this->n; ++i) vec[i]=this->v[i]/source.v[i];
     return vec;

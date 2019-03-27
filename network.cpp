@@ -1058,8 +1058,12 @@ double Network::aboavWeaireEstimate() {
 //Calculate entropy of node and edge distribution
 VecF<double> Network::entropy() {
 
-    double s0=0.0, s1=0.0;
+    double s0=0.0, s1=0.0, s2=0.0;
     VecF<double> p=getNodeDistribution();
+    VecF<double> q=p;
+    double mean=0.0;
+    for(int i=0; i<q.n; ++i) mean+=i*q[i];
+    for(int i=0; i<q.n; ++i) q[i]=i*q[i]/mean;
     VecF< VecF<double> > e=getEdgeDistribution();
 
     for(int i=0; i<p.n; ++i){
@@ -1068,13 +1072,17 @@ VecF<double> Network::entropy() {
 
     for(int i=0; i<e.n; ++i){
         for(int j=0; j<e[i].n; ++j){
-            if(e[i][j]>0.0) s1-=e[i][j]*log(e[i][j]);
+            if(e[i][j]>0.0){
+                s1-=e[i][j]*log(e[i][j]);
+                s2+=e[i][j]*log(e[i][j]/(q[i]*q[j]));
+            }
         }
     }
 
-    VecF<double> entropy(2);
+    VecF<double> entropy(3);
     entropy[0]=s0;
     entropy[1]=s1;
+    entropy[2]=s2;
 
     return entropy;
 }
