@@ -87,7 +87,6 @@ public:
 
 };
 
-
 //Harmonic Bonds, Infinite Cost Arc Intersections, Constrained to Sphere
 class HI3DS: public BasePotentialModel3D{
 
@@ -113,7 +112,7 @@ public:
     void gcnForce(double& x0, double& y0, double& z0, double& fx0, double& fy0, double& fz0) override;
 };
 
-//Additional 3D vector functions
+//Addition 3D vector functions
 inline VecF<double> crossProduct(VecF<double>& v0, VecF<double>& v1);
 inline double dotProduct(VecF<double>& v0, VecF<double>& v1);
 inline double orthodromicDist(VecF<double>& v0, VecF<double>& v1);

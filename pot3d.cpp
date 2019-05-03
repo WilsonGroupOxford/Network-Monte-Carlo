@@ -345,6 +345,7 @@ void HLJ3DS::gcnForce(double &x0, double &y0, double &z0, double &fx0, double &f
 }
 
 
+
 //##### HARMONIC BONDS, INFINITE COST ARC INTERSECTIONS, CONSTRAINED TO SPHERE #####
 HI3DS::HI3DS():BasePotentialModel3D(){};
 
@@ -366,7 +367,7 @@ double HI3DS::repPotential(double &x0, double &y0, double &z0, double &x1, doubl
 }
 
 double HI3DS::intPotential(double &x0, double &y0, double &z0, double &x1, double &y1, double &z1, double &x2,
-                           double &y2, double &z2, double &x3, double &y3, double &z3, int &p) {
+                            double &y2, double &z2, double &x3, double &y3, double &z3, int &p) {
     VecF<double> p0(3),p1(3),p2(3),p3(3);
     p0[0]=x0;
     p0[1]=y0;
@@ -380,7 +381,6 @@ double HI3DS::intPotential(double &x0, double &y0, double &z0, double &x1, doubl
     p3[0]=x3;
     p3[1]=y3;
     p3[2]=z3;
-    if(p0==p2 || p0==p3 || p1==p2 || p1==p3) return 0.0;
     p0/=vNorm(p0);
     p1/=vNorm(p1);
     p2/=vNorm(p2);
@@ -414,7 +414,7 @@ double HI3DS::gcnPotential(double &x0, double &y0, double &z0) {
 
 //Forces
 void HI3DS::bndForce(double &x0, double &y0, double &z0, double &x1, double &y1, double &z1,
-                     double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, int &p) {
+                      double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, int &p) {
     double dx=x1-x0;
     double dy=y1-y0;
     double dz=z1-z0;
@@ -432,19 +432,19 @@ void HI3DS::bndForce(double &x0, double &y0, double &z0, double &x1, double &y1,
 }
 
 void HI3DS::angForce(double &x0, double &y0, double &z0, double &x1, double &y1, double &z1, double &x2, double &y2, double &z2,
-                     double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, double &fx2, double &fy2, double &fz2, int &p) {
+                      double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, double &fx2, double &fy2, double &fz2, int &p) {
     return;
 }
 
 void HI3DS::repForce(double &x0, double &y0, double &z0, double &x1, double &y1, double &z1,
-                     double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, int &p) {
+                      double &fx0, double &fy0, double &fz0, double &fx1, double &fy1, double &fz1, int &p) {
     return;
 }
 
 void HI3DS::intForce(double &x0, double &y0, double &z0, double &x1, double &y1, double &z1, double &x2, double &y2,
-                     double &z2, double &x3, double &y3, double &z3, double &fx0, double &fy0, double &fz0, double &fx1,
-                     double &fy1, double &fz1, double &fx2, double &fy2, double &fz2, double &fx3, double &fy3,
-                     double &fz3, int &p) {
+                      double &z2, double &x3, double &y3, double &z3, double &fx0, double &fy0, double &fz0, double &fx1,
+                      double &fy1, double &fz1, double &fx2, double &fy2, double &fz2, double &fx3, double &fy3,
+                      double &fz3, int &p) {
     return;
 }
 
@@ -479,7 +479,3 @@ inline double orthodromicDist(VecF<double>& v0, VecF<double>& v1){
     double den=dotProduct(v0,v1);
     return atan(num/den);
 }
-
-
-
-

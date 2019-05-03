@@ -13,7 +13,7 @@ using namespace std;
 
 //Steepest descent algorithm
 template <typename M>
-class SteepestDescent{
+class SteepestDescentMultiDim{
 
 private:
 
@@ -25,8 +25,8 @@ private:
 public:
 
     //Constructors
-    SteepestDescent();
-    SteepestDescent(int iterationLimit, double lineSearchInc, double convergenceTolerance);
+    SteepestDescentMultiDim();
+    SteepestDescentMultiDim(int iterationLimit, double lineSearchInc, double convergenceTolerance);
 
     //Optimisation function
     VecF<int> operator() (M& model, VecF<double>& x);
@@ -35,7 +35,7 @@ public:
 
 //Steepest descent algorithm with Armijo Search
 template <typename M>
-class SteepestDescentArmijo{
+class SteepestDescentArmijoMultiDim{
 
 private:
 
@@ -47,16 +47,76 @@ private:
 public:
 
     //Constructors
-    SteepestDescentArmijo();
-    SteepestDescentArmijo(int iterationLimit, double lineSearchInc, double convergenceTolerance);
+    SteepestDescentArmijoMultiDim();
+    SteepestDescentArmijoMultiDim(int iterationLimit, double lineSearchInc, double convergenceTolerance);
 
     //Optimisation function
     VecF<int> operator() (M& model, VecF<double>& x);
 };
 
+//Newton root finder
+template <typename M>
+class Newton{
 
-//Model with function and derivative
-class Model{
+private:
+
+    //Data members
+    int itMax; //maximum iterations
+    long double tol; //convergence tolerance
+
+public:
+
+    //Constructors
+    Newton();
+    Newton(int iterationLimit, long double convergenceTolerance);
+
+    //Root finding
+    VecF<int> operator() (M& model, long double& x);
+};
+
+//Halley root finder
+template <typename M>
+class Halley{
+
+private:
+
+    //Data members
+    int itMax; //maximum iterations
+    long double tol; //convergence tolerance
+
+public:
+
+    //Constructors
+    Halley();
+    Halley(int iterationLimit, long double convergenceTolerance);
+
+    //Root finding
+    VecF<int> operator() (M& model, long double& x);
+};
+
+//One dimensional model with function and derivative
+class FuncGrad{
+
+public:
+
+    virtual long double function(long double& x)=0;
+    virtual long double gradient(long double& x)=0;
+
+};
+
+//One dimensional model with function, derivative and second derivative
+class FuncGradHess{
+
+public:
+
+    virtual long double function(long double& x)=0;
+    virtual long double gradient(long double& x)=0;
+    virtual long double hessian(long double& x)=0;
+
+};
+
+//Multidimensional model with function and derivative
+class FuncGradMultiDim{
 
 public:
 
@@ -64,6 +124,7 @@ public:
     virtual VecF<double> gradient(VecF<double>& x)=0;
 
 };
+
 
 #include "opt.tpp"
 

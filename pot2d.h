@@ -5,7 +5,7 @@
 #include <iostream>
 #include "pot.h"
 
-//Harmonic Bonds, Lennard-Jones Repulsions
+//Harmonic Bonds and Angles, Lennard-Jones Repulsions
 class HLJ2D: public BasePotentialModel2D{
 
 public:
@@ -126,6 +126,61 @@ public:
     double pbx,pby,pbrx,pbry; //cell lengths and reciprocals
     void wrap(VecF<double>& x); //wrap coordinates inside periodic cell
 
+    //Virtual to define
+    double bndPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double angPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, int& p) override;
+    double repPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double intPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3, int& p) override;
+    double gcnPotential(double& x0, double& y0) override;
+    void bndForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1, int& p) override;
+    void angForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, int& p) override;
+    void repForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1,int& p) override;
+    void intForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, double& fx3, double& fy3, int& p) override;
+    void gcnForce(double& x0, double& y0, double& fx0, double& fy0) override;
+
+};
+
+//Harmonic Windowed Bonds and Angles, Harmonic Angles, Infinite Cost Line Intersections
+class HWI2D: public BasePotentialModel2D{
+
+public:
+
+    //Constructor
+    HWI2D();
+
+    //Virtual to define
+    double bndPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double angPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, int& p) override;
+    double repPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double intPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3, int& p) override;
+    double gcnPotential(double& x0, double& y0) override;
+    void bndForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1, int& p) override;
+    void angForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, int& p) override;
+    void repForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1,int& p) override;
+    void intForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, double& fx3, double& fy3, int& p) override;
+    void gcnForce(double& x0, double& y0, double& fx0, double& fy0) override;
+
+};
+
+//Harmonic Windowed Bonds and Angles, Harmonic Angles, Infinite Cost Line Intersections, Periodic Boundary Conditions
+class HWI2DP: public BasePotentialModel2D{
+
+public:
+
+    //Constructor
+    HWI2DP(double periodicX, double periodicY);
+
+    //Periodic Boundary
+    double pbx,pby,pbrx,pbry; //cell lengths and reciprocals
+    void wrap(VecF<double>& x); //wrap coordinates inside periodic cell
 
     //Virtual to define
     double bndPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;

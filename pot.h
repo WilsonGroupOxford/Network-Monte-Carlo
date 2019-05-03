@@ -6,7 +6,7 @@
 #include "opt.h"
 
 //Base potential model
-class BasePotentialModel: public Model{
+class BasePotentialModel: public FuncGradMultiDim{
 
 public:
 

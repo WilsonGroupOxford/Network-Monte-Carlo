@@ -4,7 +4,7 @@
 
 //Default constructor
 template <typename M>
-SteepestDescent<M>::SteepestDescent() {
+SteepestDescentMultiDim<M>::SteepestDescentMultiDim() {
     itMax=1000;
     ls=1e-3;
     tol=1e-6;
@@ -12,7 +12,7 @@ SteepestDescent<M>::SteepestDescent() {
 
 //Constructor with algorithm search parameters
 template <typename M>
-SteepestDescent<M>::SteepestDescent(int iterationLimit, double lineSearchInc, double convergenceTolerance) {
+SteepestDescentMultiDim<M>::SteepestDescentMultiDim(int iterationLimit, double lineSearchInc, double convergenceTolerance) {
     itMax=iterationLimit;
     ls=lineSearchInc;
     tol=convergenceTolerance;
@@ -20,7 +20,7 @@ SteepestDescent<M>::SteepestDescent(int iterationLimit, double lineSearchInc, do
 
 //Optimisation Algorithm
 template <typename M>
-VecF<int> SteepestDescent<M>::operator()(M& model, VecF<double> &x) {
+VecF<int> SteepestDescentMultiDim<M>::operator()(M& model, VecF<double> &x) {
 
     //Initialise optimisation variables
     int it=0; //number of iterations
@@ -76,7 +76,7 @@ VecF<int> SteepestDescent<M>::operator()(M& model, VecF<double> &x) {
 
 //Default constructor
 template <typename M>
-SteepestDescentArmijo<M>::SteepestDescentArmijo() {
+SteepestDescentArmijoMultiDim<M>::SteepestDescentArmijoMultiDim() {
     itMax=1000;
     tau=0.5;
     tol=1e-6;
@@ -84,7 +84,7 @@ SteepestDescentArmijo<M>::SteepestDescentArmijo() {
 
 //Constructor with algorithm search parameters
 template <typename M>
-SteepestDescentArmijo<M>::SteepestDescentArmijo(int iterationLimit, double lineSearchInc, double convergenceTolerance) {
+SteepestDescentArmijoMultiDim<M>::SteepestDescentArmijoMultiDim(int iterationLimit, double lineSearchInc, double convergenceTolerance) {
     itMax=iterationLimit;
     tau=lineSearchInc;
     tol=convergenceTolerance;
@@ -92,7 +92,7 @@ SteepestDescentArmijo<M>::SteepestDescentArmijo(int iterationLimit, double lineS
 
 //Optimisation Algorithm
 template <typename M>
-VecF<int> SteepestDescentArmijo<M>::operator()(M& model, VecF<double> &x) {
+VecF<int> SteepestDescentArmijoMultiDim<M>::operator()(M& model, VecF<double> &x) {
 
     //Initialise optimisation variables
     int it=0; //number of iterations
@@ -143,6 +143,85 @@ VecF<int> SteepestDescentArmijo<M>::operator()(M& model, VecF<double> &x) {
     if(it==itMax-1) status[0]=2;
     else status[0]=0;
     status[1]=it;
+
+    return status;
+}
+
+//##### NEWTON METHOD FOR ROOT FINDING #####
+
+//Default constructor
+template <typename M>
+Newton<M>::Newton() {
+
+    itMax=1000;
+    tol=1e-6;
+}
+
+//Construct with optimisation parameters
+template <typename M>
+Newton<M>::Newton(int iterationLimit, long double convergenceTolerance) {
+
+    itMax=iterationLimit;
+    tol=convergenceTolerance;
+}
+
+//Root finding
+template <typename M>
+VecF<int> Newton<M>::operator()(M &model, long double &x) {
+
+    VecF<int> status(2);
+    status[0]=0;
+    for(int i=1; i<=itMax; ++i){
+        long double f0=model.function(x);
+        long double f1=model.gradient(x);
+        long double xx=x-f0/f1;
+        if(fabs(x-xx)<tol){
+            status[0]=1;
+            status[1]=i;
+            x=xx;
+            break;
+        }
+        x=xx;
+    }
+
+    return status;
+}
+
+//##### HALLEY METHOD FOR ROOT FINDING #####
+
+//Default constructor
+template <typename M>
+Halley<M>::Halley() {
+    itMax=1000;
+    tol=1e-6;
+}
+
+//Construct with optimisation parameters
+template <typename M>
+Halley<M>::Halley(int iterationLimit, long double convergenceTolerance) {
+    itMax=iterationLimit;
+    tol=convergenceTolerance;
+}
+
+//Root finding
+template <typename M>
+VecF<int> Halley<M>::operator()(M &model, long double &x) {
+
+    VecF<int> status(2);
+    status[0]=0;
+    for(int i=1; i<=itMax; ++i){
+        long double f0=model.function(x);
+        long double f1=model.gradient(x);
+        long double f2=model.hessian(x);
+        long double xx=x-(2.0*f0*f1)/(2.0*f1*f1-f0*f2);
+        if(fabs(x-xx)<tol){
+            status[0]=1;
+            status[1]=i;
+            x=xx;
+            break;
+        }
+        x=xx;
+    }
 
     return status;
 }

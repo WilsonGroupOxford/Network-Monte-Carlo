@@ -998,7 +998,7 @@ void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool keepConvex) {
         potModel.setBonds(bnds,bndP);
         if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//only optimise if no line intersections
-            SteepestDescentArmijo<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
+            SteepestDescentArmijoMultiDim<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
             optimiser(potModel,crdsA);
         }
     }
@@ -1010,7 +1010,7 @@ void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool keepConvex) {
         potModel.setGeomConstraints(constrained,potParamsC);
         if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//only optimise if no line intersections
-            SteepestDescentArmijo<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+            SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
             optimiser(potModel, crdsA);
         }
     }
@@ -1088,7 +1088,7 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
         potModel.setFixedAtoms(fixd);
         if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//optimise if no line intersections
-            SteepestDescentArmijo<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
+            SteepestDescentArmijoMultiDim<HI2DP> optimiser(goptParamsA[0],goptParamsB[0],goptParamsB[1]);
             optStatus=optimiser(potModel,crdsA);
         }
         else{
@@ -1105,7 +1105,7 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
         potModel.setGeomConstraints(constrained,potParamsC);
         if(useIntx) potModel.setIntersections(intx,intxP);
         if(potModel.function(crdsA)<numeric_limits<double>::infinity()) {//optimise if no line intersections
-            SteepestDescentArmijo<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+            SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
             optStatus = optimiser(potModel, crdsA);
         }
         else{
