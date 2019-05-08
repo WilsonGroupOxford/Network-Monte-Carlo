@@ -200,6 +200,36 @@ public:
 
 };
 
+//Harmonic Bonds and Restricted Angles, Infinite Cost Line Intersections, Periodic Boundary Conditions
+class HRI2DP: public BasePotentialModel2D{
+
+public:
+
+    //Constructor
+    HRI2DP(double periodicX, double periodicY);
+
+    //Periodic Boundary
+    double pbx,pby,pbrx,pbry; //cell lengths and reciprocals
+    void wrap(VecF<double>& x); //wrap coordinates inside periodic cell
+
+    //Virtual to define
+    double bndPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double angPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, int& p) override;
+    double repPotential(double& x0, double& y0, double& x1, double& y1, int& p) override;
+    double intPotential(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3, int& p) override;
+    double gcnPotential(double& x0, double& y0) override;
+    void bndForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1, int& p) override;
+    void angForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, int& p) override;
+    void repForce(double& x0, double& y0, double& x1, double& y1,
+                  double& fx0, double& fy0, double& fx1, double& fy1,int& p) override;
+    void intForce(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2, double& x3, double& y3,
+                  double& fx0, double& fy0, double& fx1, double& fy1, double& fx2, double& fy2, double& fx3, double& fy3, int& p) override;
+    void gcnForce(double& x0, double& y0, double& fx0, double& fy0) override;
+
+};
+
 //Functions for line intersections, implemeted from "Computational Geometry in C"
 inline double signedAreaSqTriangle(double& x0, double& y0, double& x1, double& y1, double& x2, double& y2){
     return x0*y1-y0*x1+y0*x2-x0*y2+x1*y2-x2*y1;

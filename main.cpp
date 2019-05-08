@@ -107,18 +107,16 @@ int main(){
     logfile.write("Cost function parameters read");
     //Potential model
     double potAK,potBK,potCK;
-    int convexity;
     getline(inputFile,line);
     istringstream(line)>>potBK;
     getline(inputFile,line);
     istringstream(line)>>potAK;
     getline(inputFile,line);
     istringstream(line)>>potCK;
-    getline(inputFile,line);
-    istringstream(line)>>convexity;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Potential parameters read");
+
     //Geometry optimisation
     int goptLocalIt, goptGlobalIt, goptLocalSize;
     double goptTau, goptTol;
@@ -169,7 +167,7 @@ int main(){
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
-    network.initialisePotentialModel(potAK,potBK,potCK,convexity);
+    network.initialisePotentialModel(potAK,potBK,potCK);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
     network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed);
     network.initialiseCostFunction(costT,randomSeed,costPK,costRK);
@@ -187,11 +185,14 @@ int main(){
     OutputFile outEnergy(prefixOut+"_energy.out");
     OutputFile outEntropy(prefixOut+"_entropy.out");
     OutputFile outTemperature(prefixOut+"_temperature.out");
+    OutputFile outGeometry(prefixOut+"_geometry.out");
+    outGeometry.initVariables(6,4,60,20);
     logfile.write("Ring statistics file created");
     logfile.write("Correlations file created");
     logfile.write("Energy file created");
     logfile.write("Entropy file created");
     logfile.write("Temperature file created");
+    logfile.write("Geometry file created");
     --logfile.currIndent;
     logfile.write("Files initialised");
     logfile.separator();
@@ -234,11 +235,13 @@ int main(){
                 corr[2] = aw[0];
                 corr[3] = aw[1];
                 corr[4] = aw[2];
+                VecF<double> geomStats = network.getOptimisationGeometry();
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(mcT);
+                outGeometry.writeRowVector(geomStats);
             }
         }
         --logfile.currIndent;
@@ -280,11 +283,13 @@ int main(){
                     corr[2] = aw[0];
                     corr[3] = aw[1];
                     corr[4] = aw[2];
+                    VecF<double> geomStats = network.getOptimisationGeometry();
                     outRingStats.writeRowVector(ringStats);
                     outCorr.writeRowVector(corr);
                     outEnergy.write(energy);
                     outEntropy.writeRowVector(s);
                     outTemperature.write(mcT);
+                    outGeometry.writeRowVector(geomStats);
                 }
             }
             --logfile.currIndent;
@@ -348,11 +353,13 @@ int main(){
                 corr[2] = aw[0];
                 corr[3] = aw[1];
                 corr[4] = aw[2];
+                VecF<double> geomStats = network.getOptimisationGeometry();
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(costT);
+                outGeometry.writeRowVector(geomStats);
             }
         }
         --logfile.currIndent;
@@ -400,11 +407,13 @@ int main(){
                         corr[2] = aw[0];
                         corr[3] = aw[1];
                         corr[4] = aw[2];
+                        VecF<double> geomStats = network.getOptimisationGeometry();
                         outRingStats.writeRowVector(ringStats);
                         outCorr.writeRowVector(corr);
                         outEnergy.write(energy);
                         outEntropy.writeRowVector(s);
                         outTemperature.write(costT);
+                        outGeometry.writeRowVector(geomStats);
                     }
                 }
                 --logfile.currIndent;
@@ -421,7 +430,9 @@ int main(){
     logfile.write("Simulation diagnostics");
     ++logfile.currIndent;
     bool consistent=network.checkConsistency();
+    bool convex=network.checkConvexity();
     logfile.write("Network consistent:",consistent);
+    logfile.write("Rings convex:",convex);
     logfile.write("Monte Carlo acceptance:",(double)accepted/mcSteps);
     logfile.write("Geometry optimisation codes:");
     ++logfile.currIndent;

@@ -13,10 +13,10 @@ energy      run type (energy,cost)
 0           random seed
 --------------------------------------------------
 Monte Carlo Energy Search
--1.7          start temperature (10^x)
--1.7    end temperature (10^x)
+-1          start temperature (10^x)
+-1    end temperature (10^x)
 1           temperature increment (10^x)
-1000         steps per temperature
+100         steps per temperature
 0           initial equilibration steps
 --------------------------------------------------
 Monte Carlo Cost Search
@@ -37,9 +37,8 @@ Cost Function
 --------------------------------------------------
 Potential Model
 1.0         harmonic bond force constant
-0.2         harmonic angle force constant
+0.01      harmonic angle force constant
 10.0        harmonic geometry constraint
-1           maintain ring convexity
 --------------------------------------------------
 Geometry Optimisation
 1000        monte carlo local max iterations

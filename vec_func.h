@@ -38,6 +38,17 @@ double vNormSq(T vec){
     return normSq;
 }
 
+//Angle between vectors
+template <class T>
+double vAngle(T vec0, T vec1, double& n0, double &n1){
+    n0=vNorm(vec0);
+    n1=vNorm(vec1);
+    double dotProduct=vSum(vec0*vec1)/(n0*n1);
+    if(dotProduct<-1) return acos(-1);
+    else if(dotProduct>1) return acos(1);
+    else return acos(dotProduct);
+}
+
 //Mean of vector
 template <typename T>
 double vMean(T vec){
