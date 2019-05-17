@@ -201,7 +201,7 @@ int main(){
     int accepted=0,optIterations=0;
     VecF<int> optCodes(4);
     optCodes=0;
-    int trackFreq=1;
+    int trackFreq=100;
     VecF<int> moveStatus;
     if(runType=="energy") {//energy run
         //Run monte carlo equilibrium

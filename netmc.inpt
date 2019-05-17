@@ -1,11 +1,11 @@
 I/0
-./output_files/testt       output prefix
+./output_files/test fullerene_test/c3_92       output prefix
 --------------------------------------------------
 Network Properties
-100         number of rings
+200         number of rings
 3           min ring size
 20          max ring size
-hexagonal      lattice (square,hexagonal,goldberg,inv_cubic)
+mixed      lattice (square,hexagonal,goldberg,inv_cubic)
 default         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
@@ -13,10 +13,10 @@ energy      run type (energy,cost)
 0           random seed
 --------------------------------------------------
 Monte Carlo Energy Search
--1          start temperature (10^x)
--1    end temperature (10^x)
-1           temperature increment (10^x)
-100         steps per temperature
+-10          start temperature (10^x)
+-10    end temperature (10^x)
+0.01           temperature increment (10^x)
+1         steps per temperature
 0           initial equilibration steps
 --------------------------------------------------
 Monte Carlo Cost Search
@@ -36,8 +36,8 @@ Cost Function
 1.0        r constant
 --------------------------------------------------
 Potential Model
-1.0         harmonic bond force constant
-0.01      harmonic angle force constant
+1.0  harmonic bond force constant
+0.2      harmonic angle force constant
 10.0        harmonic geometry constraint
 --------------------------------------------------
 Geometry Optimisation

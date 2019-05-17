@@ -15,9 +15,10 @@ Network::Network(int nNodes, int maxCnxs) {
 }
 
 //Construct with choice of default lattice
-Network::Network(int nNodes, string lattice, int maxCnxs) {
+Network::Network(int nNodes, string lattice, int maxCnxs, double mixProportion) {
     if(lattice=="square") initialiseSquareLattice(sqrt(nNodes),maxCnxs);
     else if(lattice=="triangular") initialiseTriangularLattice(sqrt(nNodes),maxCnxs);
+    else if(lattice=="mixTS") initialiseMixedTSLattice(sqrt(nNodes),maxCnxs,0.6);
     else if(lattice=="cubic") initialiseCubicLattice(nNodes,maxCnxs);
     else if(lattice=="geodesic") initialiseGeodesicLattice(nNodes,maxCnxs);
     initialiseDescriptors(maxCnxs);
@@ -209,7 +210,8 @@ void Network::initialiseTriangularLattice(int dim, int& maxCnxs) {
     rpb=VecF<double>(2);
     pb[0]=dim;
     pb[1]=dim*sqrt(3)*0.5;
-    rpb=1.0/dim;
+    rpb[0]=1.0/pb[0];
+    rpb[1]=1.0/pb[1];
     VecF<double> c(2);
     double dy=sqrt(3.0)*0.5;
     for(int y=0; y<dim; ++y){
@@ -284,6 +286,216 @@ void Network::initialiseTriangularLattice(int dim, int& maxCnxs) {
                 nodes[id].dualCnxs.addValue(cnx);
             }
             ++id;
+        }
+    }
+}
+
+//Initialise mixed triangular and square lattices
+void Network::initialiseMixedTSLattice(int dim, int &maxCnxs, double mixProportion) {
+    geometryCode="2DE"; //2D euclidean
+    int xDimT=dim*mixProportion, xDimS=dim-xDimT;
+    int yDimT=dim, yDimS=yDimT*3.0/2.0;
+    int nT=0.5*(xDimT+xDimT-1)*yDimT;
+    int nS=xDimS*yDimS;
+    nodes=VecR<Node>(0,nT+nS);
+
+    //make 6 coordinate nodes
+    if(maxCnxs<6) maxCnxs=6; //need at least 6 connections
+    for(int i=0; i<nodes.nMax; ++i){
+        Node node(i,maxCnxs,maxCnxs);
+        nodes.addValue(node);
+    }
+
+    //set up separations
+    double dxTT=sqrt(3.0), dxTS=0.5, dxSS=1.0;
+    double dyTT=1.5, dySS=1.0;
+
+    //assign coordinates in layers
+    pb=VecF<double>(2);
+    rpb=VecF<double>(2);
+    pb[0]=(xDimT-1)*dxTT+(xDimS-1)*dxSS+2*dxTS;
+    pb[1]=yDimS;
+    rpb[0]=1.0/pb[0];
+    rpb[1]=1.0/pb[1];
+    VecF<double> c(2);
+    //make triangular lattice
+    int nodeCount=0;
+    for(int y=0; y<yDimT; ++y){
+        c[1]=1.0+y*dyTT;
+        if(y%2==0){
+            for(int x=0; x<xDimT; ++x){
+                c[0]=x*dxTT;
+                nodes[nodeCount].crd=c;
+                ++nodeCount;
+            }
+        }
+        else{
+            for(int x=0; x<xDimT-1; ++x){
+                c[0]=(x+0.5)*dxTT;
+                nodes[nodeCount].crd=c;
+                ++nodeCount;
+            }
+        }
+    }
+    //make square lattice
+    for(int y=0; y<yDimS; ++y){
+        c[1]=0.5+y*dySS;
+        for(int x=0; x<xDimS; ++x){
+            c[0]=(xDimT-1)*dxTT+dxTS+x*dxSS;
+            nodes[nodeCount].crd=c;
+            ++nodeCount;
+        }
+    }
+
+    //make connections to nodes in clockwise order
+    //triangle
+    nodeCount=0;
+    int cnx;
+    for(int y=0; y<yDimT; ++y){
+        if(y%2==0) {
+            for(int x=0; x<xDimT; ++x){
+                if(x==0) {
+                    cnx = nT + (3 * y / 2 + 2) * xDimS - 1;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+xDimT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount-xDimT+1+nT)%nT);
+                    cnx = nT + (3 * y / 2 + 1) * xDimS - 1;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                }
+                else if(x==xDimT-1) {
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+xDimT-1);
+                    cnx = nT + (3 * y / 2 + 1) * xDimS;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                    cnx = nT + (3 * y / 2) * xDimS;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount-xDimT+nT)%nT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                }
+                else{
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+xDimT-1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+xDimT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount-xDimT+1+nT)%nT);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount-xDimT+nT)%nT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                }
+                ++nodeCount;
+            }
+        }
+        else {
+            for(int x=0; x<xDimT-1; ++x){
+                if(x==0) {
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT-1)%nT);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT)%nT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT+1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT);
+                    cnx = nT + (3 * (y-1) / 2 + 3) * xDimS-1;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                }
+                else if(x==xDimT-2) {
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT-1)%nT);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT)%nT);
+                    cnx = nT + (3 * (y-1) / 2 + 2) * xDimS;
+                    nodes[nodeCount].netCnxs.addValue(cnx);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT+1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                }
+                else{
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT-1)%nT);
+                    nodes[nodeCount].netCnxs.addValue((nodeCount+xDimT)%nT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT+1);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-xDimT);
+                    nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                }
+                ++nodeCount;
+            }
+        }
+    }
+    //square
+    for(int y=0; y<yDimS; ++y){
+        for(int x=0; x<xDimS; ++x){
+            if(x==0){
+                if(y%3<2) cnx=(y/3)*(xDimT+xDimT-1)+xDimT-1;
+                else cnx=((y/3)+1)*(xDimT+xDimT-1)-1;
+                nodes[nodeCount].netCnxs.addValue(cnx);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT+xDimS)%(nS));
+                nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT-xDimS+nS)%(nS));
+            }
+            else if(x==xDimS-1){
+                nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT+xDimS)%(nS));
+                if(y%3<2) cnx=(y/3)*(xDimT+xDimT-1);
+                else cnx=(y/3)*(xDimT+xDimT-1)+xDimT;
+                nodes[nodeCount].netCnxs.addValue(cnx);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT-xDimS+nS)%(nS));
+            }
+            else{
+                nodes[nodeCount].netCnxs.addValue(nodeCount-1);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT+xDimS)%(nS));
+                nodes[nodeCount].netCnxs.addValue(nodeCount+1);
+                nodes[nodeCount].netCnxs.addValue(nT+(nodeCount-nT-xDimS+nS)%(nS));
+            }
+            ++nodeCount;
+        }
+    }
+
+    /*make dual connections
+     * find unique triangles and squares and assign id
+     * attribute ids to nodes */
+    map<string,int> polyIds;
+    int polyId=0;
+    //find unique triangles/squares by looping over ordered network connections
+    for(int i=0; i<nodes.n; ++i){
+        string polyCode;
+        int n=nodes[i].netCnxs.n;
+        for(int j=0; j<n; ++j){
+            VecR<int> poly(0,4);
+            poly.addValue(i);
+            poly.addValue(nodes[i].netCnxs[j]);
+            poly.addValue(nodes[i].netCnxs[(j+1)%n]);
+            if(vContains(nodes[poly[1]].netCnxs,poly[2])){//triangle
+                poly=vSort(poly);
+                polyCode="#"+to_string(poly[0])+"#"+to_string(poly[1])+"#"+to_string(poly[2]);
+            }
+            else{//square
+                VecR<int> common=vCommonValues(nodes[poly[1]].netCnxs,nodes[poly[2]].netCnxs);
+                common.delValue(poly[0]);
+                poly.addValue(common[0]);
+                poly=vSort(poly);
+                polyCode="#"+to_string(poly[0])+"#"+to_string(poly[1])+"#"+to_string(poly[2])+"#"+to_string(poly[3]);
+            }
+            if(polyIds.count(polyCode)==0){
+                polyIds[polyCode]=polyId;
+                ++polyId;
+            }
+        }
+    }
+    //add dual ids depending on triangles/squares present - will be ordered
+    for(int i=0; i<nodes.n; ++i){
+        string polyCode;
+        int n=nodes[i].netCnxs.n;
+        for(int j=0; j<n; ++j){
+            VecR<int> poly(0,4);
+            poly.addValue(i);
+            poly.addValue(nodes[i].netCnxs[j]);
+            poly.addValue(nodes[i].netCnxs[(j+1)%n]);
+            if(vContains(nodes[poly[1]].netCnxs,poly[2])){//triangle
+                poly=vSort(poly);
+                polyCode="#"+to_string(poly[0])+"#"+to_string(poly[1])+"#"+to_string(poly[2]);
+            }
+            else{//square
+                VecR<int> common=vCommonValues(nodes[poly[1]].netCnxs,nodes[poly[2]].netCnxs);
+                common.delValue(poly[0]);
+                poly.addValue(common[0]);
+                poly=vSort(poly);
+                polyCode="#"+to_string(poly[0])+"#"+to_string(poly[1])+"#"+to_string(poly[2])+"#"+to_string(poly[3]);
+            }
+            nodes[i].dualCnxs.addValue(polyIds.at(polyCode));
         }
     }
 }

@@ -34,6 +34,11 @@ LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int maxACnxs, int maxB
         networkB=Network(nodesA,"geodesic",maxBCnxs);
         networkA=networkB.constructDual(maxACnxs);
     }
+    else if(latticeA=="mixed"){
+        networkB=Network(nodesA,"mixTS",maxBCnxs);
+        networkA=networkB.constructDual(maxACnxs);
+        writeXYZ("test");
+    }
     minNodeCnxs=minCnxs;
 }
 
@@ -252,14 +257,15 @@ void LinkedNetwork::optimalProjection(string projType) {
                 }
                 else e0=e1;
                 radius+=radiusInc;
-                if(radius>upperLim) throw string("Could not find minimum in initial spherical minimisation");
+                if(radius>upperLim) break;
             }
             radiusInc/=10.0;
         }
 
         //Optimise with minimum radius
+//        potParamsC[0]=0.0;
         potParamsC[1]=minRadius;
-        globalGeometryOptimisation(false,false);
+        globalGeometryOptimisation(false,true);
     }
 }
 
@@ -801,7 +807,8 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     //Restricted optimisation of local region
     if(convex){
         optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],true); //wider area
-        energy=globalPotentialEnergy(potParamsD[0]);
+//        energy=globalPotentialEnergy(potParamsD[0]);
+        energy=globalPotentialEnergy(0);
     }
     else energy=numeric_limits<double>::infinity();
 
@@ -954,15 +961,19 @@ double LinkedNetwork::globalPotentialEnergy(bool useIntx) {
         potEnergy=potModel.function(crdsA);
     }
     else if(networkA.geometryCode=="2DS"){
-        //**** WILL NOT CURRENTLY INCLUDE ANGLE TERMS ****//
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
         HI3DS potModel;
         potModel.setBonds(bnds,bndP);
+        potModel.setAngles(angs,angP);
         potModel.setGeomConstraints(constrained,potParamsC);
         if(useIntx) potModel.setIntersections(intx,intxP);
         potEnergy=potModel.function(crdsA);
     }
+
+    //Convexity
+    bool convex=checkConvexity();
+    if(!convex) potEnergy=numeric_limits<double>::infinity();
 
     return potEnergy;
 }
@@ -1023,16 +1034,29 @@ void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool restrict) {
         }
     }
     else if(networkA.geometryCode=="2DS"){
-        //**** WILL NOT CURRENTLY INCLUDE ANGLE TERMS ****//
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
-        HI3DS potModel;
-        potModel.setBonds(bnds,bndP);
-        potModel.setGeomConstraints(constrained,potParamsC);
-        if(useIntx) potModel.setIntersections(intx,intxP);
-        if(potModel.function(crdsA)<numeric_limits<double>::infinity()){//only optimise if no line intersections
-            SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
-            optimiser(potModel, crdsA);
+        if(!restrict) {
+            HI3DS potModel;
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            potModel.setGeomConstraints(constrained, potParamsC);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            if (potModel.function(crdsA) < numeric_limits<double>::infinity()) {//only optimise if no line intersections
+                SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+                optimiser(potModel, crdsA);
+            }
+        }
+        else{
+            HRI3DS potModel;
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            potModel.setGeomConstraints(constrained, potParamsC);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            if (potModel.function(crdsA) < numeric_limits<double>::infinity()) {//only optimise if no line intersections
+                SteepestDescentArmijoMultiDim<HRI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+                optimiser(potModel, crdsA);
+            }
         }
     }
 
@@ -1129,21 +1153,37 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
         }
     }
     else if(networkA.geometryCode=="2DS"){
-        //**** WILL NOT CURRENTLY INCLUDE ANGLE TERMS ****//
         VecF<int> constrained(networkA.nodes.n);
         for(int i=0; i<networkA.nodes.n; ++i) constrained[i]=i;
-        HI3DS potModel;
-        potModel.setBonds(bnds,bndP);
-        potModel.setFixedAtoms(fixd);
-        potModel.setGeomConstraints(constrained,potParamsC);
-        if(useIntx) potModel.setIntersections(intx,intxP);
-        if(potModel.function(crdsA)<numeric_limits<double>::infinity()) {//optimise if no line intersections
-            SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
-            optStatus = optimiser(potModel, crdsA);
+        if(!restrict) {
+            HI3DS potModel;
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            potModel.setFixedAtoms(fixd);
+            potModel.setGeomConstraints(constrained, potParamsC);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            if (potModel.function(crdsA) < numeric_limits<double>::infinity()) {//optimise if no line intersections
+                SteepestDescentArmijoMultiDim<HI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+                optStatus = optimiser(potModel, crdsA);
+            } else {
+                optStatus[0] = 3;
+                optStatus[1] = 0;
+            }
         }
-        else{
-            optStatus[0]=3;
-            optStatus[1]=0;
+        else {
+            HRI3DS potModel;
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            potModel.setFixedAtoms(fixd);
+            potModel.setGeomConstraints(constrained, potParamsC);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            if (potModel.function(crdsA) < numeric_limits<double>::infinity()) {//optimise if no line intersections
+                SteepestDescentArmijoMultiDim<HRI3DS> optimiser(goptParamsA[0], goptParamsB[0], goptParamsB[1]);
+                optStatus = optimiser(potModel, crdsA);
+            } else {
+                optStatus[0] = 3;
+                optStatus[1] = 0;
+            }
         }
     }
     return optStatus;
@@ -1521,37 +1561,68 @@ bool LinkedNetwork::checkConvexity() {
 //Check convexity by summing angles around node
 bool LinkedNetwork::checkConvexity(int id) {
 
-    //Coordinate vectors, coordination and pbc
-    VecF<double> v0(2),v1(2),v2(2);
-    v0[0]=crdsA[2*id];
-    v0[1]=crdsA[2*id+1];
-    int cnd=networkA.nodes[id].netCnxs.n;
-    int id1,id2;
-    double pbx=networkA.pb[0],pby=networkA.pb[1];
-    double pbrx=networkA.rpb[0],pbry=networkA.rpb[1];
     double angleSum=0.0;
-    //Determine vectors to neighbours and sum angles
-    for(int i=0; i<cnd; ++i){
-        int j=(i+1)%cnd;
-        id1=networkA.nodes[id].netCnxs[i];
-        id2=networkA.nodes[id].netCnxs[j];
-        //Periodic vectors to adjacent neighbours
-        v1[0]=crdsA[2*id1];
-        v1[1]=crdsA[2*id1+1];
-        v2[0]=crdsA[2*id2];
-        v2[1]=crdsA[2*id2+1];
-        v1-=v0;
-        v2-=v0;
-        v1[0]-=pbx*nearbyint(v1[0]*pbrx);
-        v1[1]-=pby*nearbyint(v1[1]*pbry);
-        v2[0]-=pbx*nearbyint(v2[0]*pbrx);
-        v2[1]-=pby*nearbyint(v2[1]*pbry);
-        //Angle from dot product
-        double n1,n2;
-        angleSum+=vAngle(v1,v2,n1,n2);
+    if(networkA.geometryCode=="2DE") {
+        //Coordinate vectors, coordination and pbc
+        VecF<double> v0(2), v1(2), v2(2);
+        v0[0] = crdsA[2 * id];
+        v0[1] = crdsA[2 * id + 1];
+        int cnd = networkA.nodes[id].netCnxs.n;
+        int id1, id2;
+        double pbx = networkA.pb[0], pby = networkA.pb[1];
+        double pbrx = networkA.rpb[0], pbry = networkA.rpb[1];
+        //Determine vectors to neighbours and sum angles
+        for (int i = 0; i < cnd; ++i) {
+            int j = (i + 1) % cnd;
+            id1 = networkA.nodes[id].netCnxs[i];
+            id2 = networkA.nodes[id].netCnxs[j];
+            //Periodic vectors to adjacent neighbours
+            v1[0] = crdsA[2 * id1];
+            v1[1] = crdsA[2 * id1 + 1];
+            v2[0] = crdsA[2 * id2];
+            v2[1] = crdsA[2 * id2 + 1];
+            v1 -= v0;
+            v2 -= v0;
+            v1[0] -= pbx * nearbyint(v1[0] * pbrx);
+            v1[1] -= pby * nearbyint(v1[1] * pbry);
+            v2[0] -= pbx * nearbyint(v2[0] * pbrx);
+            v2[1] -= pby * nearbyint(v2[1] * pbry);
+            //Angle from dot product
+            double n1, n2;
+            angleSum += vAngle(v1, v2, n1, n2);
+        }
+    }
+    else if (networkA.geometryCode=="2DS"){
+        //Project neighbour vectors onto tangent plane of sphere, then sum angles
+        VecF<double> v0(3), v1(3), v2(3);
+        v0[0] = crdsA[3 * id];
+        v0[1] = crdsA[3 * id + 1];
+        v0[2] = crdsA[3 * id + 2];
+        double n0=vNorm(v0);
+        VecF<double> normal=v0/n0;
+        int cnd = networkA.nodes[id].netCnxs.n;
+        int id1, id2;
+        for (int i = 0; i < cnd; ++i) {
+            int j = (i + 1) % cnd;
+            id1 = networkA.nodes[id].netCnxs[i];
+            id2 = networkA.nodes[id].netCnxs[j];
+            v1[0] = crdsA[3 * id1];
+            v1[1] = crdsA[3 * id1 + 1];
+            v1[2] = crdsA[3 * id1 + 2];
+            v2[0] = crdsA[3 * id2];
+            v2[1] = crdsA[3 * id2 + 1];
+            v2[2] = crdsA[3 * id2 + 2];
+            v1 -= v0;
+            v2 -= v0;
+            v1-=normal*vSum(v1*normal);
+            v2-=normal*vSum(v2*normal);
+            //Angle from dot product
+            double n1, n2;
+            angleSum += vAngle(v1, v2, n1, n2);
+        }
     }
 
-    if(fabs(angleSum-2*M_PI)<1e-12) return true;
+    if (fabs(angleSum - 2 * M_PI) < 1e-12) return true;
     else return false;
 }
 
@@ -1606,7 +1677,9 @@ VecF<double> LinkedNetwork::getOptimisationGeometry() {
     optGeom[4]=y;
     optGeom[5]=ySq;
     optGeom[6]=y/yN;
-    optGeom[7]=sqrt(ySq/yN-optGeom[6]*optGeom[6]);
+    optGeom[7]=ySq/yN-optGeom[6]*optGeom[6];
+    if(optGeom[7]<0.0) optGeom[7]=0.0;
+    else optGeom[7]=sqrt(optGeom[7]);
 
     return optGeom;
 }

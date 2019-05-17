@@ -18,7 +18,8 @@ private:
 
     //Default lattices
     void initialiseSquareLattice(int dim, int& maxCnxs); //4 coordinate nodes, forming periodic square lattice
-    void initialiseTriangularLattice(int dim, int& maxCnxs); //4 coordinate nodes, forming periodic square lattice
+    void initialiseTriangularLattice(int dim, int& maxCnxs); //6 coordinate nodes, forming periodic square lattice
+    void initialiseMixedTSLattice(int dim, int& maxCnxs, double mixProportion); //4&6 coordinate nodes, forming mixed triangular and square lattice
     void initialiseCubicLattice(int nNodes, int& maxCnxs); //3&4 coordinate nodes, forming cubic lattice
     void initialiseGeodesicLattice(int nNodes, int& maxCnxs); //5&6 coordinate nodes, forming geodesic lattice
     void initialiseDescriptors(int maxCnxs); //node descriptors
@@ -35,7 +36,7 @@ public:
     //Constructors
     Network();
     Network(int nNodes, int maxCnxs);
-    Network(int nNodes, string lattice, int maxCnxs); //construct with default lattice
+    Network(int nNodes, string lattice, int maxCnxs, double mixProportion=0.0); //construct with default lattice
     Network(string prefix); //construct by loading from files
 
     //Member Functions

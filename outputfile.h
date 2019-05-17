@@ -35,7 +35,7 @@ public:
     ~OutputFile(){file.close();}
 
     //Initialise file variables
-    void initVariables(int precision=6, int indentSize=4, int sepSize=60, int spaceSize=10){
+    void initVariables(int precision=8, int indentSize=4, int sepSize=60, int spaceSize=20){
         file << fixed << showpoint << setprecision(precision);
         indent="";
         dashed="";

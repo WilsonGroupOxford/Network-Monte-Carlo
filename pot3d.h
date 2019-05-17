@@ -87,13 +87,38 @@ public:
 
 };
 
-//Harmonic Bonds, Infinite Cost Arc Intersections, Constrained to Sphere
+//Harmonic Bonds and Angles, Infinite Cost Arc Intersections, Constrained to Sphere
 class HI3DS: public BasePotentialModel3D{
 
 public:
 
     //Constructor
     HI3DS();
+
+    //Virtual to define
+    double bndPotential(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, int& p) override;
+    double angPotential(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, double& x2, double& y2, double& z2, int& p) override;
+    double repPotential(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, int& p) override;
+    double intPotential(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, double& x2, double& y2, double& z2, double& x3, double& y3, double& z3, int& p) override;
+    double gcnPotential(double& x0, double& y0, double& z0) override;
+    void bndForce(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1,
+                  double& fx0, double& fy0, double& fz0, double& fx1, double& fy1, double& fz1,  int& p) override;
+    void angForce(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, double& x2, double& y2, double& z2,
+                  double& fx0, double& fy0, double& fz0, double& fx1, double& fy1, double& fz1, double& fx2, double& fy2, double& fz2,  int& p) override;
+    void repForce(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1,
+                  double& fx0, double& fy0, double& fz0, double& fx1, double& fy1, double& fz1,  int& p) override;
+    void intForce(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, double& x2, double& y2, double& z2, double& x3, double& y3, double& z3,
+                  double& fx0, double& fy0, double& fz0, double& fx1, double& fy1, double& fz1, double& fx2, double& fy2, double& fz2, double& fx3, double& fy3, double& fz3, int& p) override;
+    void gcnForce(double& x0, double& y0, double& z0, double& fx0, double& fy0, double& fz0) override;
+};
+
+//Harmonic Bonds and Restricted Angles, Infinite Cost Arc Intersections, Constrained to Sphere
+class HRI3DS: public BasePotentialModel3D{
+
+public:
+
+    //Constructor
+    HRI3DS();
 
     //Virtual to define
     double bndPotential(double& x0, double& y0, double& z0, double& x1, double& y1, double& z1, int& p) override;
