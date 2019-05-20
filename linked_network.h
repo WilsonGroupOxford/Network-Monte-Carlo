@@ -50,10 +50,14 @@ public:
     void optimalProjection(string projType); //project lattice onto different geometry with optimal parameters
     int randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen); //choose nodes forming random edge in lattice A, and corresponding nodes in lattice B
     int generateSwitchIds34(int cnxType, VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for switch move
+    int generateMixIds34(int cnxType, VecF<int>& mixIdsA, VecF<int>& mixIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for mix move
     void switchCnx33(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
     void switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x4 coordinate nodes
+    void switchCnx43(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 4 and 3 coordinate nodes
+    void mixCnx34(VecF<int> mixIdsA, VecF<int> mixIdsB); //mix connectivities in lattice between 4 and 3 coordinate nodes
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
     VecF<int> monteCarloCostSwitchMove(double& cost, double& energy, double pTarget, double rTarget); //monte carlo switching move with cost function
+    VecF<int> monteCarloMixMove(double& energy); //monte carlo mixing move
     double costFunction(double& pTarget, double& rTarget); //cost function based on ring statistics and assortative mixing
     double globalPotentialEnergy(bool useIntx); //calculate potential energy of entire system
     void globalGeometryOptimisation(bool useIntx, bool restrict); //geometry optimise entire system

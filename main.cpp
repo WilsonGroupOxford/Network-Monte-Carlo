@@ -46,11 +46,13 @@ int main(){
     logfile.write("Network properties read");
     //Monte carlo
     string runType;
-    int randomSeed;
+    int randomSeed,mixFreq;
     getline(inputFile,line);
     istringstream(line)>>runType;
     getline(inputFile,line);
     istringstream(line)>>randomSeed;
+    getline(inputFile,line);
+    istringstream(line)>>mixFreq;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Monte Carlo parameters read");
@@ -173,6 +175,21 @@ int main(){
     network.initialiseCostFunction(costT,randomSeed,costPK,costRK);
     if(crystal!="default") network.makeCrystal(crystal,lattice);
     if(lattice=="goldberg" || lattice=="inv_cubic") network.optimalProjection("sphere");
+    bool mixedLattice; //whether mixed coordination lattice
+    if(lattice.substr(0,3)=="mix"){//get statistics on number of 3/4 coordinate nodes for mixed lattice
+        mixedLattice=true;
+        double mixA=network.networkA.nodes.n,mixA3=0,mixA4=0;
+        for(int i=0; i<mixA; ++i){
+            if(network.networkA.nodes[i].netCnxs.n==3) ++mixA3;
+            else if(network.networkA.nodes[i].netCnxs.n==4) ++mixA4;
+        }
+        logfile.write("Mixed lattice total rings:",network.networkB.nodes.n);
+        logfile.write("Mixed lattice total nodes:",mixA);
+        logfile.write("Mixed lattice 3 coordinate nodes:",mixA3/mixA);
+        logfile.write("Mixed lattice 4 coordinate nodes:",mixA4/mixA);
+        logfile.write("Monte carlo mixing move frequency:",mixFreq);
+    }
+    else mixedLattice=false;
     --logfile.currIndent;
     logfile.write("Network initialised");
     logfile.separator();
@@ -207,10 +224,12 @@ int main(){
         //Run monte carlo equilibrium
         logfile.write("Running Monte Carlo equilibration");
         ++logfile.currIndent;
-        double energy;
+        double energy=network.mc.getEnergy();
         double mcT = pow(10, mcStartT);
         for (int i = 1; i <= equilSteps; ++i) {
-            moveStatus = network.monteCarloSwitchMove(energy);
+            if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
+            else if(i%mixFreq==0) moveStatus = network.monteCarloMixMove(energy);
+            else moveStatus = network.monteCarloSwitchMove(energy);
             accepted += moveStatus[0];
             optCodes[moveStatus[1]] += 1;
             optIterations += moveStatus[2];
@@ -258,7 +277,9 @@ int main(){
             logfile.write("Temperature:", mcT);
             ++logfile.currIndent;
             for (int i = 1; i <= mcSteps; ++i) {
-                moveStatus = network.monteCarloSwitchMove(energy);
+                if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
+                else if(i%mixFreq==0) moveStatus = network.monteCarloMixMove(energy);
+                else moveStatus = network.monteCarloSwitchMove(energy);
                 accepted += moveStatus[0];
                 optCodes[moveStatus[1]] += 1;
                 optIterations += moveStatus[2];

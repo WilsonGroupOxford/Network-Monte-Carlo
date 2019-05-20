@@ -18,7 +18,7 @@ Network::Network(int nNodes, int maxCnxs) {
 Network::Network(int nNodes, string lattice, int maxCnxs, double mixProportion) {
     if(lattice=="square") initialiseSquareLattice(sqrt(nNodes),maxCnxs);
     else if(lattice=="triangular") initialiseTriangularLattice(sqrt(nNodes),maxCnxs);
-    else if(lattice=="mixTS") initialiseMixedTSLattice(sqrt(nNodes),maxCnxs,0.6);
+    else if(lattice=="mixTS") initialiseMixedTSLattice(sqrt(nNodes),maxCnxs,mixProportion);
     else if(lattice=="cubic") initialiseCubicLattice(nNodes,maxCnxs);
     else if(lattice=="geodesic") initialiseGeodesicLattice(nNodes,maxCnxs);
     initialiseDescriptors(maxCnxs);

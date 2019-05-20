@@ -28,6 +28,7 @@ public:
     void setEnergy(double energy);
     void setTemperature(double temperature);
     int acceptanceCriterion(double energy);
+    double getEnergy();
 };
 
 #endif //NL_MONTECARLO_H

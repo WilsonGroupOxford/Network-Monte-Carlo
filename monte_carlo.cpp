@@ -24,6 +24,11 @@ void Metropolis::setEnergy(double energy) {
     energyPrev=energy;
 }
 
+//Get energy
+double Metropolis::getEnergy() {
+    return energyPrev;
+}
+
 //Set temperature
 void Metropolis::setTemperature(double temperature) {
     rTemperature=1.0/temperature;
