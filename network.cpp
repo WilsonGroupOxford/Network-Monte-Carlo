@@ -1231,7 +1231,7 @@ double Network::assortativity() {
     /* degree correlation coefficient:
      * r=sum_jk jk(e_jk-q_j*q_k)/sig^2
      * sig^2 = sum_k k^2*q_k - (sum_k k*q_k)^2
-     * bounded between -1 (perfectly dissortative) and 1 (perfectly assortative) with 0 as neutral */
+     * bounded between -1 (perfectly disasssortative) and 1 (perfectly assortative) with 0 as neutral */
     double r=0.0;
     for(int j=0; j<e.n; ++j){
         for(int k=0; k<e.n; ++k) r+=j*k*(e[j][k]-q[j]*q[k]);

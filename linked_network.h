@@ -68,11 +68,12 @@ public:
     void wrapCoordinates(); //wrap coordinates if periodic
     void syncCoordinates(); //update geometry optimised coordinates to networks
     VecF<double> getNodeDistribution(string lattice); //get proportion of nodes of each size
+    VecF< VecF<int> > getEdgeDistribution(string lattice); //get unnormalised proportion of node connections
     VecF<double> getAboavWeaire(string lattice); //get aboav-weaire parameters
     double getAssortativity(string lattice); //get network assortativity
     double getAboavWeaireEstimate(string lattice); //get estimate of aw alpha parameter from assortativity
     VecF<double> getEntropy(string lattice); //get node and edge distribution entropy
-    VecF<double> getOptimisationGeometry(); //get bond/angle mean and standard deviation
+    VecF<double> getOptimisationGeometry(VecF<double> &lenHist, VecF<double> &angHist); //get bond/angle mean and standard deviation
     bool checkConsistency(); //check networks are consistent
     bool checkCnxConsistency(); //check for mutual connections
     bool checkDescriptorConsistency(); //check descriptors are accurate

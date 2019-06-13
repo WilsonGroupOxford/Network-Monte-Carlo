@@ -192,10 +192,10 @@ void LinkedNetwork::optimalProjection(string projType) {
         for(int i=1; i<searchLim; ++i){
             networkA.project(projType,radius);
             potParamsC[1]=radius;
-            for(int i=0; i<networkA.nodes.n; ++i){
-                crdsA[3*i]=networkA.nodes[i].crd[0];
-                crdsA[3*i+1]=networkA.nodes[i].crd[1];
-                crdsA[3*i+2]=networkA.nodes[i].crd[2];
+            for(int j=0; j<networkA.nodes.n; ++j){
+                crdsA[3*j]=networkA.nodes[j].crd[0];
+                crdsA[3*j+1]=networkA.nodes[j].crd[1];
+                crdsA[3*j+2]=networkA.nodes[j].crd[2];
             }
             globalGeometryOptimisation(false,false);
             energies[i]=globalPotentialEnergy(false);
@@ -1823,6 +1823,13 @@ VecF<double> LinkedNetwork::getNodeDistribution(string lattice) {
     else return networkB.getNodeDistribution();
 }
 
+//Get unnormalised probability distribution of node connections in given lattice
+VecF< VecF<int> > LinkedNetwork::getEdgeDistribution(string lattice) {
+
+    if(lattice=="A") return networkA.edgeDistribution;
+    else return networkB.edgeDistribution;
+}
+
 //Get Aboav-Weaire fitting parameters
 VecF<double> LinkedNetwork::getAboavWeaire(string lattice) {
 
@@ -2103,7 +2110,7 @@ bool LinkedNetwork::checkConvexity(int id) {
 }
 
 //Calculate bond length and angle mean and standard deviation
-VecF<double> LinkedNetwork::getOptimisationGeometry() {
+VecF<double> LinkedNetwork::getOptimisationGeometry(VecF<double> &lenHist, VecF<double> &angHist) {
 
     //Calculate for current configuration
     double x=0.0,xSq=0.0,y=0.0,ySq=0.0; //len and angle
@@ -2112,6 +2119,9 @@ VecF<double> LinkedNetwork::getOptimisationGeometry() {
     VecF<double> v0(2),v1(2),v2(2);
     double pbx=networkA.pb[0],pby=networkA.pb[1];
     double pbrx=networkA.rpb[0],pbry=networkA.rpb[1];
+    double lenBinWidth = 4.0/10000.0;
+    double angBinWidth = 2*M_PI/10000.0;
+    double bin;
     for(int i=0; i<networkA.nodes.n; ++i){
         cnd=networkA.nodes[i].netCnxs.n;
         v0[0]=crdsA[2*i];
@@ -2136,11 +2146,15 @@ VecF<double> LinkedNetwork::getOptimisationGeometry() {
                 x+=n1;
                 xSq+=n1*n1;
                 xN+=1;
+                bin = floor(n1/lenBinWidth);
+                if(bin<lenHist.n) lenHist[bin] += 1.0;
             }
             //Angles
             y+=theta;
             ySq+=theta*theta;
             yN+=1;
+            bin = floor(theta/angBinWidth);
+            if (bin<angHist.n) angHist[bin] += 1.0;
         }
     }
 

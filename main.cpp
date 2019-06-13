@@ -46,13 +46,11 @@ int main(){
     logfile.write("Network properties read");
     //Monte carlo
     string runType;
-    int randomSeed,mixFreq;
+    int randomSeed;
     getline(inputFile,line);
     istringstream(line)>>runType;
     getline(inputFile,line);
     istringstream(line)>>randomSeed;
-    getline(inputFile,line);
-    istringstream(line)>>mixFreq;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Monte Carlo parameters read");
@@ -187,7 +185,6 @@ int main(){
         logfile.write("Mixed lattice total nodes:",mixA);
         logfile.write("Mixed lattice 3 coordinate nodes:",mixA3/mixA);
         logfile.write("Mixed lattice 4 coordinate nodes:",mixA4/mixA);
-        logfile.write("Monte carlo mixing move frequency:",mixFreq);
     }
     else mixedLattice=false;
     --logfile.currIndent;
@@ -203,16 +200,27 @@ int main(){
     OutputFile outEntropy(prefixOut+"_entropy.out");
     OutputFile outTemperature(prefixOut+"_temperature.out");
     OutputFile outGeometry(prefixOut+"_geometry.out");
+    OutputFile outEmatrix(prefixOut+"_ematrix.out");
+    OutputFile outGeomHist(prefixOut+"_geomhist.out");
     outGeometry.initVariables(6,4,60,20);
+    outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
+    outGeomHist.initVariables(6,4,60,20);
     logfile.write("Ring statistics file created");
     logfile.write("Correlations file created");
     logfile.write("Energy file created");
     logfile.write("Entropy file created");
     logfile.write("Temperature file created");
     logfile.write("Geometry file created");
+    logfile.write("Geometry histogram file created");
+    logfile.write("Edge distribution file created");
     --logfile.currIndent;
     logfile.write("Files initialised");
     logfile.separator();
+
+    //Initialise total analysis variables - only update in main simulation not equilibration
+    VecF<double> lenHist(10000),angHist(10000);
+    lenHist=0.0;
+    angHist=0.0;
 
     //Run monte carlo
     int accepted=0,optIterations=0;
@@ -228,8 +236,7 @@ int main(){
         double mcT = pow(10, mcStartT);
         for (int i = 1; i <= equilSteps; ++i) {
             if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
-            else if(i%mixFreq==0) moveStatus = network.monteCarloMixMove(energy);
-            else moveStatus = network.monteCarloSwitchMove(energy);
+            else moveStatus = network.monteCarloMixMove(energy);
             accepted += moveStatus[0];
             optCodes[moveStatus[1]] += 1;
             optIterations += moveStatus[2];
@@ -254,13 +261,16 @@ int main(){
                 corr[2] = aw[0];
                 corr[3] = aw[1];
                 corr[4] = aw[2];
-                VecF<double> geomStats = network.getOptimisationGeometry();
+                VecF<double> emptyL,emptyA; //dummy histograms
+                VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
+                VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(mcT);
                 outGeometry.writeRowVector(geomStats);
+                for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
             }
         }
         --logfile.currIndent;
@@ -278,8 +288,7 @@ int main(){
             ++logfile.currIndent;
             for (int i = 1; i <= mcSteps; ++i) {
                 if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
-                else if(i%mixFreq==0) moveStatus = network.monteCarloMixMove(energy);
-                else moveStatus = network.monteCarloSwitchMove(energy);
+                else moveStatus = network.monteCarloMixMove(energy);
                 accepted += moveStatus[0];
                 optCodes[moveStatus[1]] += 1;
                 optIterations += moveStatus[2];
@@ -304,13 +313,15 @@ int main(){
                     corr[2] = aw[0];
                     corr[3] = aw[1];
                     corr[4] = aw[2];
-                    VecF<double> geomStats = network.getOptimisationGeometry();
+                    VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
+                    VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
                     outRingStats.writeRowVector(ringStats);
                     outCorr.writeRowVector(corr);
                     outEnergy.write(energy);
                     outEntropy.writeRowVector(s);
                     outTemperature.write(mcT);
                     outGeometry.writeRowVector(geomStats);
+                    for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                 }
             }
             --logfile.currIndent;
@@ -374,13 +385,16 @@ int main(){
                 corr[2] = aw[0];
                 corr[3] = aw[1];
                 corr[4] = aw[2];
-                VecF<double> geomStats = network.getOptimisationGeometry();
+                VecF<double> emptyL,emptyA; //dummy histograms
+                VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
+                VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(costT);
                 outGeometry.writeRowVector(geomStats);
+                for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
             }
         }
         --logfile.currIndent;
@@ -428,13 +442,15 @@ int main(){
                         corr[2] = aw[0];
                         corr[3] = aw[1];
                         corr[4] = aw[2];
-                        VecF<double> geomStats = network.getOptimisationGeometry();
+                        VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
+                        VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
                         outRingStats.writeRowVector(ringStats);
                         outCorr.writeRowVector(corr);
                         outEnergy.write(energy);
                         outEntropy.writeRowVector(s);
                         outTemperature.write(costT);
                         outGeometry.writeRowVector(geomStats);
+                        for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                     }
                 }
                 --logfile.currIndent;
@@ -445,6 +461,16 @@ int main(){
         --logfile.currIndent;
         logfile.write("Monte Carlo simulation complete");
         logfile.separator();
+    }
+
+    //Write total analysis
+    for(int i=0; i<10000; ++i){
+        VecF<double> hist(4);
+        hist[0]=i*4.0/10000.0;
+        hist[1]=lenHist[i];
+        hist[2]=i*2*M_PI/10000.0;
+        hist[3]=angHist[i];
+        outGeomHist.writeRowVector(hist);
     }
 
     //Check network
