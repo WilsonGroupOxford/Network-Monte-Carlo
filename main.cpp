@@ -202,6 +202,7 @@ int main(){
     OutputFile outGeometry(prefixOut+"_geometry.out");
     OutputFile outEmatrix(prefixOut+"_ematrix.out");
     OutputFile outGeomHist(prefixOut+"_geomhist.out");
+    OutputFile outCluster(prefixOut+"_cluster.out");
     outGeometry.initVariables(6,4,60,20);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
     outGeomHist.initVariables(6,4,60,20);
@@ -271,6 +272,13 @@ int main(){
                 outTemperature.write(mcT);
                 outGeometry.writeRowVector(geomStats);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                if(mixedLattice) {
+                    VecF<double> cluster(3);
+                    cluster[0] = network.getCluster("A", 3);
+                    cluster[1] = network.getCluster("A", 4);
+                    cluster[2] = network.getAssortativity("A");
+                    outCluster.writeRowVector(cluster);
+                }
             }
         }
         --logfile.currIndent;
@@ -322,6 +330,13 @@ int main(){
                     outTemperature.write(mcT);
                     outGeometry.writeRowVector(geomStats);
                     for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                    if(mixedLattice) {
+                        VecF<double> cluster(3);
+                        cluster[0] = network.getCluster("A", 3);
+                        cluster[1] = network.getCluster("A", 4);
+                        cluster[2] = network.getAssortativity("A");
+                        outCluster.writeRowVector(cluster);
+                    }
                 }
             }
             --logfile.currIndent;
@@ -395,6 +410,13 @@ int main(){
                 outTemperature.write(costT);
                 outGeometry.writeRowVector(geomStats);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                if(mixedLattice) {
+                    VecF<double> cluster(3);
+                    cluster[0] = network.getCluster("A", 3);
+                    cluster[1] = network.getCluster("A", 4);
+                    cluster[2] = network.getAssortativity("A");
+                    outCluster.writeRowVector(cluster);
+                }
             }
         }
         --logfile.currIndent;
@@ -451,6 +473,13 @@ int main(){
                         outTemperature.write(costT);
                         outGeometry.writeRowVector(geomStats);
                         for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                        if(mixedLattice) {
+                            VecF<double> cluster(3);
+                            cluster[0] = network.getCluster("A", 3);
+                            cluster[1] = network.getCluster("A", 4);
+                            cluster[2] = network.getAssortativity("A");
+                            outCluster.writeRowVector(cluster);
+                        }
                     }
                 }
                 --logfile.currIndent;

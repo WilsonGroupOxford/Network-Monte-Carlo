@@ -1299,6 +1299,48 @@ VecF<double> Network::entropy() {
     return entropy;
 }
 
+//Get cluster statistics for given node coordination
+double Network::cluster(int nodeCnd) {
+
+    //Indentify nodes with the required coordination
+    VecF<int> activeNodes(nodes.n);
+    for(int i=0; i<nodes.n; ++i){
+        if(nodes[i].netCnxs.n==nodeCnd) activeNodes[i]=1;
+        else activeNodes[i]=0;
+    }
+
+    //Find largest cluster
+    int maxClstSize=0;
+    for(int i=0; i<nodes.n; ++i){
+        if(activeNodes[i]==1){
+            VecR<int> clst(0,nodes.n);
+            VecR<int> search0(0,nodes.n),search1(0,nodes.n);
+            clst.addValue(i);
+            search0.addValue(i);
+            for(;;) {
+                for (int j = 0; j < search0.n; ++j) {
+                    for (int k = 0; k < nodeCnd; ++k) {
+                        int id = nodes[search0[j]].netCnxs[k];
+                        if (nodes[id].netCnxs.n == nodeCnd) search1.addValue(id);
+                    }
+                }
+                if(search1.n==0) break;
+                search1=vUnique(search1);
+                VecR<int> delValues=vCommonValues(clst,search1);
+                for(int j=0; j<delValues.n; ++j) search1.delValue(delValues[j]);
+                search0=search1;
+                search1=VecR<int>(0,nodes.n);
+                for(int j=0; j<search0.n; ++j) clst.addValue(search0[j]);
+                if(search0.n==0) break;
+            }
+            for(int j=0; j<clst.n; ++j) activeNodes[clst[j]]=0;
+            if(clst.n>maxClstSize) maxClstSize=clst.n;
+        }
+    }
+
+    return maxClstSize;
+}
+
 //Write network in format which can be loaded
 void Network::write(string prefix) {
 

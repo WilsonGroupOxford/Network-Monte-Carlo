@@ -74,6 +74,7 @@ public:
     double getAboavWeaireEstimate(string lattice); //get estimate of aw alpha parameter from assortativity
     VecF<double> getEntropy(string lattice); //get node and edge distribution entropy
     VecF<double> getOptimisationGeometry(VecF<double> &lenHist, VecF<double> &angHist); //get bond/angle mean and standard deviation
+    double getCluster(string lattice, int nodeCnd); //get cluster statistics for given node coordination
     bool checkConsistency(); //check networks are consistent
     bool checkCnxConsistency(); //check for mutual connections
     bool checkDescriptorConsistency(); //check descriptors are accurate

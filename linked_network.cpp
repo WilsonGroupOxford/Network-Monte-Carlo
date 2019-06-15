@@ -1859,6 +1859,13 @@ VecF<double> LinkedNetwork::getEntropy(string lattice) {
     else return networkB.entropy();
 }
 
+//Get cluster information
+double LinkedNetwork::getCluster(string lattice, int nodeCnd){
+
+    if(lattice=="A") return networkA.cluster(nodeCnd);
+    else return networkB.cluster(nodeCnd);
+}
+
 //Check linked networks for consistency
 bool LinkedNetwork::checkConsistency() {
 
