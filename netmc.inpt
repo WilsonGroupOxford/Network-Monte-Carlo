@@ -2,10 +2,10 @@ I/0
 ./output_files/test       output prefix
 --------------------------------------------------
 Network Properties
-200         number of rings
+400         number of rings
 3           min ring size
 20          max ring size
-mix_0.8      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
+hexagonal      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
 default         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
@@ -14,10 +14,10 @@ energy      run type (energy,cost)
 --------------------------------------------------
 Monte Carlo Energy Search
 10.0          start temperature (10^x)
--2.0    end temperature (10^x)
+10.0    end temperature (10^x)
 -0.5           temperature increment (10^x)
-2000         steps per temperature
-2000           initial equilibration steps
+500         steps per temperature
+000           initial equilibration steps
 --------------------------------------------------
 Monte Carlo Cost Search
 0         randomisation steps
@@ -36,8 +36,8 @@ Cost Function
 1.0        r constant
 --------------------------------------------------
 Potential Model
-1.0  harmonic bond force constant
-0.2      harmonic angle force constant
+0.1  harmonic bond force constant
+1.0      harmonic angle force constant
 10.0        harmonic geometry constraint
 --------------------------------------------------
 Geometry Optimisation

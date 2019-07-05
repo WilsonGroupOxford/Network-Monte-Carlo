@@ -55,6 +55,7 @@ public:
     void switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x4 coordinate nodes
     void switchCnx43(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 4 and 3 coordinate nodes
     void mixCnx34(VecF<int> mixIdsA, VecF<int> mixIdsB); //mix connectivities in lattice between 4 and 3 coordinate nodes
+    bool convexRearrangement(int cnxType, VecF<int> switchIdsA, VecF<int> switchIdsB); //rearrange nodes after switchi to maintain convexity
     VecF<int> monteCarloSwitchMove(double& energy); //monte carlo switching move
     VecF<int> monteCarloCostSwitchMove(double& cost, double& energy, double pTarget, double rTarget); //monte carlo switching move with cost function
     VecF<int> monteCarloMixMove(double& energy); //monte carlo mixing move

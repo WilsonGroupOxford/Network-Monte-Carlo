@@ -650,7 +650,7 @@ void HRI2DP::angForce(double &x0, double &y0, double &x1, double &y1, double &x2
     dy2*=n2;
     double cosTheta=dx1*dx2+dy1*dy2;
     double sinThetaSq=1.0-cosTheta*cosTheta;
-    double ff=-2*angP[2*p]*(cosTheta-angP[2*p+1])*(1-cosTheta*angP[2*p+1])/pow(sinThetaSq,2);
+    double ff=2*angP[2*p]*(cosTheta-angP[2*p+1])*(1-cosTheta*angP[2*p+1])/pow(sinThetaSq,2);
     double ffx1=-ff*n1*(dx2-cosTheta*dx1);
     double ffy1=-ff*n1*(dy2-cosTheta*dy1);
     double ffx2=-ff*n2*(dx1-cosTheta*dx2);

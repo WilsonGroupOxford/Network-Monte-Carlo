@@ -123,7 +123,7 @@ VecF<int> SteepestDescentArmijoMultiDim<M>::operator()(M& model, VecF<double> &x
         for(;;){
             d=x-g*alpha;
             f1=model.function(d);
-            f1+=0.5*alpha*gSq;
+            f1+=0.1*alpha*gSq;
             if(f1<=f){
                 x=d;
                 ++it;

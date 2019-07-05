@@ -1165,6 +1165,94 @@ void LinkedNetwork::mixCnx34(VecF<int> mixIdsA, VecF<int> mixIdsB) {
     }
 }
 
+//Rearrange nodes after connection switch to maintain convexity
+bool LinkedNetwork::convexRearrangement(int cnxType, VecF<int> switchIdsA, VecF<int> switchIdsB) {
+
+    bool convex;
+
+    if(cnxType==33 || cnxType==34 || cnxType==44){
+        //Unpack nodes
+        int a,b,c,d,e,f;
+        a=switchIdsA[0];
+        b=switchIdsA[1];
+        c=switchIdsA[2];
+        d=switchIdsA[3];
+        e=switchIdsA[4];
+        f=switchIdsA[5];
+
+        //Maintains which nodes are convex
+        VecF<bool> convexNodes;
+        if(cnxType==33) convexNodes=VecF<bool>(6);
+        else if(cnxType==34) convexNodes=VecF<bool>(7);
+        else if(cnxType==44) convexNodes=VecF<bool>(8);
+
+        //Initial guess places a at the centre of cd, b at the centre of ef
+        VecF<double> va(2),vb(2),vc(2),vd(2),ve(2),vf(2);
+        va[0]=crdsA[2*a];
+        va[1]=crdsA[2*a+1];
+        vb[0]=crdsA[2*b];
+        vb[1]=crdsA[2*b+1];
+        vc[0]=crdsA[2*c];
+        vc[1]=crdsA[2*c+1];
+        vd[0]=crdsA[2*d];
+        vd[1]=crdsA[2*d+1];
+        ve[0]=crdsA[2*e];
+        ve[1]=crdsA[2*e+1];
+        vf[0]=crdsA[2*f];
+        vf[1]=crdsA[2*f+1];
+        VecF<double> vce(2),vdf(2),vcd(2),vef(2);
+        vce=ve-vc;
+        vdf=vf-vd;
+        vcd=vd-vc;
+        vef=vf-ve;
+        vce[0]-=networkA.pb[0]*nearbyint(vce[0]*networkA.rpb[0]);
+        vce[1]-=networkA.pb[1]*nearbyint(vce[1]*networkA.rpb[1]);
+        vdf[0]-=networkA.pb[0]*nearbyint(vdf[0]*networkA.rpb[0]);
+        vdf[1]-=networkA.pb[1]*nearbyint(vdf[1]*networkA.rpb[1]);
+        vcd[0]-=networkA.pb[0]*nearbyint(vcd[0]*networkA.rpb[0]);
+        vcd[1]-=networkA.pb[1]*nearbyint(vcd[1]*networkA.rpb[1]);
+        vef[0]-=networkA.pb[0]*nearbyint(vef[0]*networkA.rpb[0]);
+        vef[1]-=networkA.pb[1]*nearbyint(vef[1]*networkA.rpb[1]);
+        va=vd-vcd/2.0+vdf/10.0;
+        vb=ve+vef/2.0-vce/10.0;
+        va[0]-=networkA.pb[0]*nearbyint(va[0]*networkA.rpb[0]);
+        va[1]-=networkA.pb[1]*nearbyint(va[1]*networkA.rpb[1]);
+        vb[0]-=networkA.pb[0]*nearbyint(vb[0]*networkA.rpb[0]);
+        vb[1]-=networkA.pb[1]*nearbyint(vb[1]*networkA.rpb[1]);
+        crdsA[2*a]=va[0];
+        crdsA[2*a+1]=va[1];
+        crdsA[2*b]=vb[0];
+        crdsA[2*b+1]=vb[1];
+        for(int i=0; i<switchIdsA.n; ++i) convexNodes[i]=checkConvexity(switchIdsA[i]);
+        convex=(convexNodes==true);
+
+        //Guess move a,b towards each other
+        VecF<double> vab(2);
+        if(!convex) {
+            vab = (vb - va) * 0.5 * 0.1;
+            vab[0] -= networkA.pb[0] * nearbyint(vab[0] * networkA.rpb[0]);
+            vab[1] -= networkA.pb[1] * nearbyint(vab[1] * networkA.rpb[1]);
+            for (int i = 0; i < 9; ++i) {
+                va += vab;
+                vb -= vab;
+                va[0] -= networkA.pb[0] * nearbyint(va[0] * networkA.rpb[0]);
+                va[1] -= networkA.pb[1] * nearbyint(va[1] * networkA.rpb[1]);
+                vb[0] -= networkA.pb[0] * nearbyint(vb[0] * networkA.rpb[0]);
+                vb[1] -= networkA.pb[1] * nearbyint(vb[1] * networkA.rpb[1]);
+                crdsA[2*a]=va[0];
+                crdsA[2*a+1]=va[1];
+                crdsA[2*b]=vb[0];
+                crdsA[2*b+1]=vb[1];
+                for (int i = 0; i < switchIdsA.n; ++i) convexNodes[i] = checkConvexity(switchIdsA[i]);
+                convex = (convexNodes == true);
+                if (convex) break;
+            }
+        }
+    }
+    else throw(string("Not yet implemented!"));
+
+    return convex;
+}
 
 //Single monte carlo switching move
 VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
@@ -1199,22 +1287,27 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     for(int i=0; i<saveNodesB.n; ++i) saveNodesB[i]=networkB.nodes[switchIdsB[i]];
 
     //Switch and geometry optimise
-    VecF<int> optStatus;
+    VecF<int> optStatus(3);
     if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
     else if(cnxType==43) switchCnx43(switchIdsA,switchIdsB);
     else throw string("Not yet implemented!");
-    //Unrestricted local optimisation of switched atoms
-    optStatus=localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
-    //Check move maintained convexity
+
+    //Maintain convexity after switch, either by moving nodes or local optimisation
     bool convex;
-    for(int i=0; i<switchIdsA.n; ++i){
-        convex=checkConvexity(switchIdsA[i]);
-        if(!convex) break;
-    }
-    //Restricted optimisation of local region
+    convex = convexRearrangement(cnxType,switchIdsA,switchIdsB);
+//    else{
+//        localGeometryOptimisation(a,b,1,false,false);
+//        for(int i=0; i<switchIdsA.n; ++i){
+//            convex=checkConvexity(switchIdsA[i]);
+//            if(!convex) break;
+//        }
+//    }
+    if(!convex) optStatus[0]=4;
+
+    //Geometry optimisation of local region
     if(convex){
-        optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],true); //wider area
+        optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],true);
 //        energy=globalPotentialEnergy(potParamsD[0]);
         energy=globalPotentialEnergy(0);
     }
@@ -1236,7 +1329,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
 
     /* Status report
      * [0] accepted/rejected 1/0
-     * [1] optimisation code 0=successful 1=successful(zero force) 2=unsuccessful(it limit) 3=unsuccessful(intersection)
+     * [1] optimisation code 0=successful 1=successful(zero force) 2=unsuccessful(it limit) 3=unsuccessful(intersection) 4=unsuccessful(non-convex)
      * [2] optimisation iterations */
     VecF<int> status(3);
     status[0]=accept;
@@ -1284,9 +1377,19 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     mixCnx34(mixIdsA,mixIdsB);
     //Unrestricted local optimisation of switched atoms
     optStatus=localGeometryOptimisation(a,c,1,false,false); //bond switch atoms only
+    bool convex;
+    for(int i=0; i<mixIdsA.n; ++i){
+        convex=checkConvexity(mixIdsA[i]);
+        if(!convex) break;
+    }
+    if(!convex) optStatus[0]=4;
+
     //Restricted optimisation of local region
-    optStatus=localGeometryOptimisation(a,c,goptParamsA[1],potParamsD[0],true); //wider area
-    energy=globalPotentialEnergy(potParamsD[0]);
+    if(convex) {
+        optStatus = localGeometryOptimisation(a, c, goptParamsA[1], potParamsD[0], true); //wider area
+        energy = globalPotentialEnergy(potParamsD[0]);
+    }
+    else energy=numeric_limits<double>::infinity();
 
     //Accept or reject
     int accept=mc.acceptanceCriterion(energy);
@@ -1316,6 +1419,8 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
 
 //Single monte carlo switching move based on cost function
 VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, double pTarget, double rTarget) {
+    //***** CHECK IF NEED TO INCLUDE CONVEX REARRANGEMENT****//
+    cout<<"WARNING DEPRECATED - MAY NOT FUNCTION AS INTENDED"<<endl;
 
     /* Single MC switch move
      * 1) select random connection

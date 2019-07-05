@@ -225,7 +225,7 @@ int main(){
 
     //Run monte carlo
     int accepted=0,optIterations=0;
-    VecF<int> optCodes(4);
+    VecF<int> optCodes(5);
     optCodes=0;
     int trackFreq=100;
     VecF<int> moveStatus;
@@ -516,6 +516,7 @@ int main(){
     logfile.write("Converged (zero force): ",optCodes[1]);
     logfile.write("Unconverged: ",optCodes[2]);
     logfile.write("Failed (overlapping): ",optCodes[3]);
+    logfile.write("Failed (initially non-convex): ",optCodes[4]);
     --logfile.currIndent;
     logfile.write("Geometry optimisation average iterations:",optIterations/vSum(optCodes));
     --logfile.currIndent;
