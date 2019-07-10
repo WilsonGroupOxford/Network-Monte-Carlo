@@ -106,6 +106,7 @@ int main(){
     getline(inputFile,skip);
     logfile.write("Cost function parameters read");
     //Potential model
+    int potConvex;
     double potAK,potBK,potCK;
     getline(inputFile,line);
     istringstream(line)>>potBK;
@@ -113,6 +114,8 @@ int main(){
     istringstream(line)>>potAK;
     getline(inputFile,line);
     istringstream(line)>>potCK;
+    getline(inputFile,line);
+    istringstream(line)>>potConvex;
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Potential parameters read");
@@ -167,7 +170,7 @@ int main(){
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
-    network.initialisePotentialModel(potAK,potBK,potCK);
+    network.initialisePotentialModel(potAK,potBK,potCK,potConvex);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
     network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed);
     network.initialiseCostFunction(costT,randomSeed,costPK,costRK);
@@ -230,11 +233,12 @@ int main(){
     int trackFreq=100;
     VecF<int> moveStatus;
     if(runType=="energy") {//energy run
-        //Run monte carlo equilibrium
-        logfile.write("Running Monte Carlo equilibration");
+        //Run monte carlo thermalisation
+        logfile.write("Running Monte Carlo thermalisation");
         ++logfile.currIndent;
         double energy=network.mc.getEnergy();
-        double mcT = pow(10, mcStartT);
+        double mcT = pow(10, 100);
+        network.mc.setTemperature(mcT);
         for (int i = 1; i <= equilSteps; ++i) {
             if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
             else moveStatus = network.monteCarloMixMove(energy);
@@ -248,7 +252,7 @@ int main(){
                         to_string(accepted) + "/" + to_string(i) + " moves accepted/completed in " + to_string(dt) +
                         " seconds";
                 logfile.write(track);
-                cout << "e" << " " << i << " " << accepted << endl;
+                cout << "t" << " " << i << " " << accepted << endl;
             }
             if (i % analysisFreq == 0) {
                 VecF<double> ringStats = network.getNodeDistribution("B");

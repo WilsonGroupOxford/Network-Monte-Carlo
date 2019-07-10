@@ -49,7 +49,7 @@ LinkedNetwork::LinkedNetwork(string prefix) {
 }
 
 //Set up potential model with single angle and bond parameter set
-void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck) {
+void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck, int convex) {
 
     //Make copy of lattice A coordinates
     if(networkA.geometryCode=="2DE"){
@@ -88,6 +88,7 @@ void LinkedNetwork::initialisePotentialModel(double ak, double bk, double ck) {
     //Line intersection parameters
     potParamsD=VecF<int>(2);
     potParamsD[0]=1;
+    potParamsD[1]=convex;
 }
 
 //Set up geometry optimisation parameters
@@ -104,7 +105,7 @@ void LinkedNetwork::initialiseGeometryOpt(int iterations, double tau, double tol
 //Set up monte carlo and random number generators
 void LinkedNetwork::initialiseMonteCarlo(double temperature, int seed) {
 
-    double energy=globalPotentialEnergy(potParamsD[0]);
+    double energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     mc=Metropolis(seed,temperature,energy);
     mtGen.seed(seed);
 }
@@ -168,7 +169,7 @@ void LinkedNetwork::makeCrystal(string crystalCode, string lattice) {
                 }
             }
             globalGeometryOptimisation(false, false);
-            double energy=globalPotentialEnergy(false);
+            double energy=globalPotentialEnergy(false,false);
             mc.setEnergy(energy);
         }
     }
@@ -198,7 +199,7 @@ void LinkedNetwork::optimalProjection(string projType) {
                 crdsA[3*j+2]=networkA.nodes[j].crd[2];
             }
             globalGeometryOptimisation(false,false);
-            energies[i]=globalPotentialEnergy(false);
+            energies[i]=globalPotentialEnergy(false,false);
             cout<<radius<<" "<<energies[i]<<endl;
             radius+=1.0;
             crdsA=saveCrdsA;
@@ -226,7 +227,7 @@ void LinkedNetwork::optimalProjection(string projType) {
             }
             saveCrdsA=crdsA;
             globalGeometryOptimisation(false,false);
-            minEnergy=globalPotentialEnergy(false);
+            minEnergy=globalPotentialEnergy(false,false);
         }
 
         /* Refine minimimum
@@ -246,7 +247,7 @@ void LinkedNetwork::optimalProjection(string projType) {
                 }
                 potParamsC[1]=radius;
                 globalGeometryOptimisation(false,false);
-                e1=globalPotentialEnergy(false);
+                e1=globalPotentialEnergy(false,false);
                 cout<<radius<<" "<<e1<<" "<<minEnergy<<endl;
                 if(e1>e0 && e0<=minEnergy){
                     lowerLim=radius-2*radiusInc;
@@ -327,7 +328,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
 
     //lots of error checking to remove any potential pathological cases
     if(a==b || u==v){
-        cout<<"Note: skip in switch generation"<<endl;
+//        cout<<"Note: skip in switch generation"<<endl;
         return 1;
     }
 
@@ -384,7 +385,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         if(vContains(networkB.nodes[w].netCnxs,x)) errorFlag=7;
 
         if(errorFlag!=0){
-            cout<<"Note: skip in switch generation 33 with code "<<errorFlag<<endl;
+//            cout<<"Note: skip in switch generation 33 with code "<<errorFlag<<endl;
             return 1;
         }
 
@@ -478,7 +479,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         h=common[0];
 
         if(errorFlag!=0){
-            cout<<"Note: skip in switch generation 44"<<endl;
+//            cout<<"Note: skip in switch generation 44"<<endl;
             return 1;
         }
 
@@ -572,7 +573,7 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         if (vContains(networkB.nodes[y].netCnxs, x)) errorFlag = 7;
 
         if (errorFlag != 0) {
-            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
+//            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
             return 1;
         }
 
@@ -655,7 +656,7 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         if(vContains(networkB.nodes[v].netCnxs,w)) return 1; //v already connected to w
 
         if (errorFlag != 0) {
-            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
+//            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
             return 1;
         }
 
@@ -1293,23 +1294,22 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     else if(cnxType==43) switchCnx43(switchIdsA,switchIdsB);
     else throw string("Not yet implemented!");
 
-    //Maintain convexity after switch, either by moving nodes or local optimisation
-    bool convex;
-    convex = convexRearrangement(cnxType,switchIdsA,switchIdsB);
-//    else{
-//        localGeometryOptimisation(a,b,1,false,false);
-//        for(int i=0; i<switchIdsA.n; ++i){
-//            convex=checkConvexity(switchIdsA[i]);
-//            if(!convex) break;
-//        }
-//    }
-    if(!convex) optStatus[0]=4;
+    //Rearrange nodes after switch
+    bool geometryOK=true;
+    if(potParamsD[1]==0) localGeometryOptimisation(a,b,1,false,false);
+    else{
+        geometryOK = convexRearrangement(cnxType,switchIdsA,switchIdsB);
+        for(int i=0; i<switchIdsA.n; ++i){
+            geometryOK=checkConvexity(switchIdsA[i]);
+            if(!geometryOK) break;
+        }
+    }
+    if(!geometryOK) optStatus[0]=4;
 
     //Geometry optimisation of local region
-    if(convex){
-        optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],true);
-//        energy=globalPotentialEnergy(potParamsD[0]);
-        energy=globalPotentialEnergy(0);
+    if(geometryOK){
+        optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]);
+        energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     }
     else energy=numeric_limits<double>::infinity();
 
@@ -1373,21 +1373,23 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     for(int i=0; i<saveNodesB.n; ++i) saveNodesB[i]=networkB.nodes[mixIdsB[i]];
 
     //Switch and geometry optimise
+    bool geometryOK=true;
     VecF<int> optStatus;
     mixCnx34(mixIdsA,mixIdsB);
     //Unrestricted local optimisation of switched atoms
     optStatus=localGeometryOptimisation(a,c,1,false,false); //bond switch atoms only
-    bool convex;
-    for(int i=0; i<mixIdsA.n; ++i){
-        convex=checkConvexity(mixIdsA[i]);
-        if(!convex) break;
+    if(potParamsD[1]==1) {
+        for (int i = 0; i < mixIdsA.n; ++i) {
+            geometryOK = checkConvexity(mixIdsA[i]);
+            if (!geometryOK) break;
+        }
     }
-    if(!convex) optStatus[0]=4;
+    if(!geometryOK) optStatus[0]=4;
 
     //Restricted optimisation of local region
-    if(convex) {
-        optStatus = localGeometryOptimisation(a, c, goptParamsA[1], potParamsD[0], true); //wider area
-        energy = globalPotentialEnergy(potParamsD[0]);
+    if(geometryOK) {
+        optStatus = localGeometryOptimisation(a, c, goptParamsA[1], potParamsD[0], potParamsD[1]); //wider area
+        energy = globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     }
     else energy=numeric_limits<double>::infinity();
 
@@ -1465,7 +1467,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
 
     //Make sure not infinite energy the accept or reject
     int accept;
-    energy=globalPotentialEnergy(potParamsD[0]);
+    energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     if(energy==numeric_limits<double>::infinity()) accept=0;
     if(accept!=0) accept=mcCost.acceptanceCriterion(cost);
     if(accept==0){
@@ -1501,7 +1503,7 @@ double LinkedNetwork::costFunction(double &pTarget, double &rTarget) {
 }
 
 //Calculate potential energy of entire system
-double LinkedNetwork::globalPotentialEnergy(bool useIntx) {
+double LinkedNetwork::globalPotentialEnergy(bool useIntx, bool restrict) {
 
     /* Potential model
      * Bonds as harmonic
@@ -1535,11 +1537,20 @@ double LinkedNetwork::globalPotentialEnergy(bool useIntx) {
     //Potential model based on geometry code
     double potEnergy;
     if(networkA.geometryCode=="2DE"){
-        HRI2DP potModel(networkA.pb[0],networkA.pb[1]);
-        potModel.setBonds(bnds,bndP);
-        potModel.setAngles(angs,angP);
-        if(useIntx) potModel.setIntersections(intx,intxP);
-        potEnergy=potModel.function(crdsA);
+        if(!restrict) {
+            HI2DP potModel(networkA.pb[0], networkA.pb[1]);
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            potEnergy = potModel.function(crdsA);
+        }
+        else {
+            HRI2DP potModel(networkA.pb[0], networkA.pb[1]);
+            potModel.setBonds(bnds, bndP);
+            potModel.setAngles(angs, angP);
+            if (useIntx) potModel.setIntersections(intx, intxP);
+            potEnergy = potModel.function(crdsA);
+        }
     }
     else if(networkA.geometryCode=="2DS"){
         VecF<int> constrained(networkA.nodes.n);
@@ -1553,8 +1564,10 @@ double LinkedNetwork::globalPotentialEnergy(bool useIntx) {
     }
 
     //Convexity
-    bool convex=checkConvexity();
-    if(!convex) potEnergy=numeric_limits<double>::infinity();
+    if(restrict) {
+        bool convex = checkConvexity();
+        if (!convex) potEnergy = numeric_limits<double>::infinity();
+    }
 
     return potEnergy;
 }
@@ -2150,6 +2163,7 @@ bool LinkedNetwork::checkConvexity() {
         convex=checkConvexity(i);
         if(!convex) break;
     }
+
     return convex;
 }
 
