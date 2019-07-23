@@ -1,4 +1,6 @@
 cmake-build*/*
 output_files/*
+test/*
+debug/*
 *.log
 .idea*

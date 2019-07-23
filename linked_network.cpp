@@ -266,7 +266,7 @@ void LinkedNetwork::optimalProjection(string projType) {
         //Optimise with minimum radius
 //        potParamsC[0]=0.0;
         potParamsC[1]=minRadius;
-        globalGeometryOptimisation(false,true);
+        globalGeometryOptimisation(false,false);
     }
 }
 
@@ -313,7 +313,12 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         u=common[randIndex];
         v=common[1-randIndex];
     }
-    else throw string("Error in random connection - incorrect dual ids");
+    else{
+        wrapCoordinates();
+        syncCoordinates();
+        write("debug");
+        throw string("Error in random connection - incorrect dual ids");
+    }
 //    else{//will get thrown out when generating ids
 //        cout<<"Note: error in random connection - incorrect dual ids"<<endl;
 //        u=common[0];
@@ -625,6 +630,9 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         int c, d;
         int w, x;
 
+        //check move will not violate dual connectivity limits
+        if(networkB.nodes[u].netCnxs.n==minNodeCnxs || networkB.nodes[v].netCnxs.n==networkB.nodes[v].netCnxs.nMax) return 1;
+
         //find c and d as share ring u
         VecR<int> common, common1;
         common = vCommonValues(networkA.nodes[a].netCnxs, networkB.nodes[u].dualCnxs);
@@ -636,11 +644,24 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         if (common.n != 1) errorFlag = 1;
         d = common[0];
 
+        //check connections allow move
+        if(vContains(networkA.nodes[b].netCnxs,c)) return 1; //c already connected to b
+        if(d==b) return 1; //triangle cannot undergo mix move
+        if(networkA.nodes[c].netCnxs.n!=3) return 1; //c already 4 coordinate
+        if(errorFlag!=0) return 1; //additional flags
+
         //find w as contains a,c
         common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[c].dualCnxs);
         common.delValue(u);
-        if (common.n != 1) errorFlag = 5;
-        w = common[0];
+        if(common.n == 1) w = common[0];
+        else if (common.n == 2){
+            bool containsU0 = vContains(networkB.nodes[common[0]].netCnxs,u);
+            bool containsU1 = vContains(networkB.nodes[common[1]].netCnxs,u);
+            if (containsU0 && !containsU1) w=common[0];
+            else if (!containsU0 && containsU1) w=common[1];
+            else errorFlag = 5;
+        }
+        else errorFlag = 5;
 
         //find x from a
         common = networkA.nodes[a].dualCnxs;
@@ -650,10 +671,9 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         if (common.n != 1) errorFlag = 1;
         x = common[0];
 
-        if(vContains(networkA.nodes[b].netCnxs,c)) return 1; //c already connected to b
-        if(d==b) return 1; //triangle cannot undergo mix move
-        if(networkA.nodes[c].netCnxs.n!=3) return 1; //c already 4 coordinate
         if(vContains(networkB.nodes[v].netCnxs,w)) return 1; //v already connected to w
+        if(vCommonValues(networkB.nodes[v].dualCnxs,networkB.nodes[w].dualCnxs).n>1) return 1; //v already shares another node (besides a) with w
+        if(vCommonValues(networkA.nodes[a].dualCnxs,networkA.nodes[d].dualCnxs).n==2 && !vContains(networkA.nodes[a].netCnxs,d)) return 1; //a,d share two rings and not directly connected
 
         if (errorFlag != 0) {
 //            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
@@ -1293,7 +1313,6 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
     else if(cnxType==43) switchCnx43(switchIdsA,switchIdsB);
     else throw string("Not yet implemented!");
-
     //Rearrange nodes after switch
     bool geometryOK=true;
     if(potParamsD[1]==0) localGeometryOptimisation(a,b,1,false,false);
@@ -1310,12 +1329,13 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     if(geometryOK){
         optStatus=localGeometryOptimisation(a,b,goptParamsA[1],potParamsD[0],potParamsD[1]);
         energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
+//        syncCoordinates();
+//        write("./output_files/debug");
     }
     else energy=numeric_limits<double>::infinity();
 
     //Accept or reject
     int accept=mc.acceptanceCriterion(energy);
-//    accept=1;
     if(accept==0){
         energy=saveEnergy;
         crdsA=saveCrdsA;
@@ -1560,6 +1580,9 @@ double LinkedNetwork::globalPotentialEnergy(bool useIntx, bool restrict) {
         potModel.setAngles(angs,angP);
         potModel.setGeomConstraints(constrained,potParamsC);
         if(useIntx) potModel.setIntersections(intx,intxP);
+//        for(int i=0; i<intx.n/4; ++i){
+//            cout<<intx[4*i]<<" "<<intx[4*i+1]<<" "<<intx[4*i+2]<<" "<<intx[4*i+3]<<endl;
+//        }
         potEnergy=potModel.function(crdsA);
     }
 
@@ -1588,7 +1611,7 @@ void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool restrict) {
         generateHarmonics(i,bonds,bondParams,angles,angleParams);
     }
     //Intersections
-    VecR<int> intersections(0,networkA.nodes.n*100);
+    VecR<int> intersections(0,networkA.nodes.n*1000);
     if(useIntx){
         for(int i=0; i<networkB.nodes.n; ++i){
             generateRingIntersections(i,intersections);
@@ -1837,10 +1860,12 @@ void LinkedNetwork::generateRingIntersections(int rId, VecR<int> &intersections)
                 for(int k=0; k<nCnd0; ++k){
                     e2=networkB.nodes[rId0].dualCnxs[k];
                     e3=networkB.nodes[rId0].dualCnxs[(k+1)%nCnd0];
-                    intersections.addValue(e0);
-                    intersections.addValue(e1);
-                    intersections.addValue(e2);
-                    intersections.addValue(e3);
+                    if(e0!=e2 && e0!=e3 && e1!=e2 && e1!=e3) {
+                        intersections.addValue(e0);
+                        intersections.addValue(e1);
+                        intersections.addValue(e2);
+                        intersections.addValue(e3);
+                    }
                 }
             }
         }

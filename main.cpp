@@ -56,13 +56,15 @@ int main(){
     logfile.write("Monte Carlo parameters read");
     //Energy search
     int mcSteps,equilSteps;
-    double mcStartT,mcEndT,mcIncT;
+    double mcStartT,mcEndT,mcIncT,mcThermT;
     getline(inputFile,line);
     istringstream(line)>>mcStartT;
     getline(inputFile,line);
     istringstream(line)>>mcEndT;
     getline(inputFile,line);
     istringstream(line)>>mcIncT;
+    getline(inputFile,line);
+    istringstream(line)>>mcThermT;
     getline(inputFile,line);
     istringstream(line)>>mcSteps;
     getline(inputFile,line);
@@ -137,10 +139,12 @@ int main(){
     getline(inputFile,skip);
     logfile.write("Geometry optimisation parameters read");
     //Analysis
-    int analysisFreq;
+    int analysisFreq,writeStructures;
     getline(inputFile,line);
     istringstream(line)>>analysisFreq;
-    logfile.write("Analysis parameters read");
+    getline(inputFile,line);
+    istringstream(line)>>writeStructures;
+    logfile.write("Write parameters read");
     inputFile.close();
     --logfile.currIndent;
     logfile.write("Input file closed");
@@ -170,6 +174,7 @@ int main(){
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
+    network.write("./output_files/pre");
     network.initialisePotentialModel(potAK,potBK,potCK,potConvex);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
     network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed);
@@ -184,7 +189,11 @@ int main(){
             if(network.networkA.nodes[i].netCnxs.n==3) ++mixA3;
             else if(network.networkA.nodes[i].netCnxs.n==4) ++mixA4;
         }
+        VecF<double> ringStats = network.getNodeDistribution("B");
+        double mixAv = 0.0;
+        for(int i=0; i<=maxRingSize; ++i) mixAv += i*ringStats[i];
         logfile.write("Mixed lattice total rings:",network.networkB.nodes.n);
+        logfile.write("Mixed average ring size:",mixAv);
         logfile.write("Mixed lattice total nodes:",mixA);
         logfile.write("Mixed lattice 3 coordinate nodes:",mixA3/mixA);
         logfile.write("Mixed lattice 4 coordinate nodes:",mixA4/mixA);
@@ -237,7 +246,7 @@ int main(){
         logfile.write("Running Monte Carlo thermalisation");
         ++logfile.currIndent;
         double energy=network.mc.getEnergy();
-        double mcT = pow(10, 100);
+        double mcT = pow(10, mcThermT);
         network.mc.setTemperature(mcT);
         for (int i = 1; i <= equilSteps; ++i) {
             if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
@@ -340,6 +349,10 @@ int main(){
                         cluster[1] = network.getCluster("A", 4);
                         cluster[2] = network.getAssortativity("A");
                         outCluster.writeRowVector(cluster);
+                    }
+                    if(writeStructures) {
+                        network.syncCoordinates();
+                        network.write(prefixOut+"_t"+to_string(t)+"_"+to_string(i));
                     }
                 }
             }
@@ -483,6 +496,10 @@ int main(){
                             cluster[1] = network.getCluster("A", 4);
                             cluster[2] = network.getAssortativity("A");
                             outCluster.writeRowVector(cluster);
+                        }
+                        if(writeStructures) {
+                            network.syncCoordinates();
+                            network.write(prefixOut+"_"+to_string(i));
                         }
                     }
                 }
