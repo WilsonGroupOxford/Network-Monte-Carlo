@@ -313,10 +313,17 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         u=common[randIndex];
         v=common[1-randIndex];
     }
+    else if(common.n==3){
+        cout<<vCommonValues(networkB.nodes[common[0]].netCnxs,common)<<endl;
+        cout<<vCommonValues(networkB.nodes[common[1]].netCnxs,common)<<endl;
+        cout<<vCommonValues(networkB.nodes[common[2]].netCnxs,common)<<endl;
+        throw string("XXX");
+    }
     else{
         wrapCoordinates();
         syncCoordinates();
         write("debug");
+        cout<<a<<" "<<b<<" "<<common<<endl;
         throw string("Error in random connection - incorrect dual ids");
     }
 //    else{//will get thrown out when generating ids
@@ -645,9 +652,9 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         d = common[0];
 
         //check connections allow move
+        if(networkA.nodes[c].netCnxs.n!=3) return 1; //c already 4 coordinate
         if(vContains(networkA.nodes[b].netCnxs,c)) return 1; //c already connected to b
         if(d==b) return 1; //triangle cannot undergo mix move
-        if(networkA.nodes[c].netCnxs.n!=3) return 1; //c already 4 coordinate
         if(errorFlag!=0) return 1; //additional flags
 
         //find w as contains a,c

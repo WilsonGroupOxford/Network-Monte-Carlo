@@ -292,13 +292,16 @@ void Network::initialiseTriangularLattice(int dim, int& maxCnxs) {
 
 //Initialise mixed triangular and square lattices
 void Network::initialiseMixedTSLattice(int dim, int &maxCnxs, double mixProportion) {
+    //To select lattice based on number of nodes of each type xS = ((4*xT-4)*p4/p3-1)/3
+
     geometryCode="2DE"; //2D euclidean
-    int xDimT=dim*mixProportion, xDimS=dim-xDimT;
-    int yDimT=dim, yDimS=yDimT*3.0/2.0;
+    int xDimT=nearbyint(dim*mixProportion), xDimS=dim-xDimT;
+    int yDimT=dim-2, yDimS=yDimT*3.0/2.0;
     int nT=0.5*(xDimT+xDimT-1)*yDimT;
     int nS=xDimS*yDimS;
     nodes=VecR<Node>(0,nT+nS);
-
+//    cout<<xDimT<<" "<<xDimS<<endl;
+//    cout<<yDimT<<" "<<yDimS<<endl;
     //make 6 coordinate nodes
     if(maxCnxs<6) maxCnxs=6; //need at least 6 connections
     for(int i=0; i<nodes.nMax; ++i){

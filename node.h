@@ -18,7 +18,7 @@ public:
     //Data members
     int id; //unique id used by other nodes for connections
     VecF<double> crd; //coordinate
-    VecR<int> netCnxs; //connections to nodes i network
+    VecR<int> netCnxs; //connections to nodes in network
     VecR<int> dualCnxs; //connections to nodes in dual
 
     //Constructors, copy constructor, assignment operator
