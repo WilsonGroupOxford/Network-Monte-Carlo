@@ -314,12 +314,6 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         u=common[randIndex];
         v=common[1-randIndex];
     }
-    else if(common.n==3){
-        cout<<vCommonValues(networkB.nodes[common[0]].netCnxs,common)<<endl;
-        cout<<vCommonValues(networkB.nodes[common[1]].netCnxs,common)<<endl;
-        cout<<vCommonValues(networkB.nodes[common[2]].netCnxs,common)<<endl;
-        throw string("XXX");
-    }
     else{
         wrapCoordinates();
         syncCoordinates();
@@ -327,11 +321,6 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         cout<<a<<" "<<b<<" "<<common<<endl;
         throw string("Error in random connection - incorrect dual ids");
     }
-//    else{//will get thrown out when generating ids
-//        cout<<"Note: error in random connection - incorrect dual ids"<<endl;
-//        u=common[0];
-//        v=common[0];
-//    }
 
     return cnxType;
 }
@@ -590,8 +579,9 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
 
         //Additional error checking including preventing two nodes connecting multiple times
         if (c == d || e == f) errorFlag = 6; //can simply be triangle edge sharing pair (not an error)
-        if (vContains(networkB.nodes[w].netCnxs, x)) errorFlag = 7;
-        if (vContains(networkB.nodes[y].netCnxs, x)) errorFlag = 7;
+        if(vContains(networkB.nodes[w].netCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[y].netCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[y].auxCnxs,x)) errorFlag=7;
 
         if (errorFlag != 0) {
 //            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
@@ -628,85 +618,103 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
 //Generate all ids of nodes in lattices A and B needed for mix move, only for 3/4 coordinate nodes
 int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &mixIdsB, int a, int b, int u, int v) {
 
-    if(cnxType==33){//cannot decrement either 3 cnd nodes
+    if(cnxType!=43){//cannot decrement either 3 cnd nodes
         return 1;
     }
-    else{
+    else {
         /* Mix connectivities in lattice and dual
-         * 4-3 or 4-4 coordination connection
-         * a,b,c,d are nodes in lattice A
-         * u,v,w,x are nodes in lattice B
-         * a-b, a-c, c-d
+         * a,b,c,d,e,f,g are nodes in lattice A
+         * u,v,w,x,y are nodes in lattice B
+         * a-b, a-c, a-e, a-g
+         * b-a, b-d, b-f
          * a-b share u-v
-         * a-c share u-w
-         * b-a-c-d share u
-         * u-v, u-w, w-x, x-v */
+         * c-a-b-d share u
+         * e-a-b-f share v
+         * g-a-e share w
+         * d-b-f share x
+         * g-a-c share y
+         * u-v, u-y, u-x
+         * v-u, v-w, v-x
+         * w-y */
 
         int errorFlag = 0;
-        int c, d;
-        int w, x;
+        int c, d, e, f, g;
+        int w, x, y;
 
-        //check move will not violate dual connectivity limits
-        if(networkB.nodes[u].netCnxs.n==minNodeCnxs || networkB.nodes[v].netCnxs.n==networkB.nodes[v].netCnxs.nMax) return 1;
-
-        //find c and d as share ring u
         VecR<int> common, common1;
         common = vCommonValues(networkA.nodes[a].netCnxs, networkB.nodes[u].dualCnxs);
         common.delValue(b);
         if (common.n != 1) errorFlag = 1;
         c = common[0];
-        common = vCommonValues(networkA.nodes[c].netCnxs, networkB.nodes[u].dualCnxs);
+        common = vCommonValues(networkA.nodes[b].netCnxs, networkB.nodes[u].dualCnxs);
         common.delValue(a);
-        if (common.n != 1) errorFlag = 1;
+        if (common.n != 1) errorFlag = 2;
         d = common[0];
+        common = vCommonValues(networkA.nodes[a].netCnxs, networkB.nodes[v].dualCnxs);
+        common.delValue(b);
+        if (common.n != 1) errorFlag = 3;
+        e = common[0];
+        common = vCommonValues(networkA.nodes[b].netCnxs, networkB.nodes[v].dualCnxs);
+        common.delValue(a);
+        if (common.n != 1) errorFlag = 4;
+        f = common[0];
 
-        //check connections allow move
-        if(networkA.nodes[c].netCnxs.n!=3) return 1; //c already 4 coordinate
-        if(vContains(networkA.nodes[b].netCnxs,c)) return 1; //c already connected to b
-        if(d==b) return 1; //triangle cannot undergo mix move
-        if(errorFlag!=0) return 1; //additional flags
-
-        //find w as contains a,c
+        common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[e].dualCnxs);
+        common.delValue(v);
+        if (common.n != 1) errorFlag = 5;
+        w = common[0];
+        common = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[d].dualCnxs);
+        common1 = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[f].dualCnxs);
+        common.delValue(u);
+        common1.delValue(v);
+        if (common.n != 1 || common1.n != 1 || common[0] != common1[0]) errorFlag = 5;
+        x = common[0];
         common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[c].dualCnxs);
         common.delValue(u);
-        if(common.n == 1) w = common[0];
-        else if (common.n == 2){
-            bool containsU0 = vContains(networkB.nodes[common[0]].netCnxs,u);
-            bool containsU1 = vContains(networkB.nodes[common[1]].netCnxs,u);
-            if (containsU0 && !containsU1) w=common[0];
-            else if (!containsU0 && containsU1) w=common[1];
-            else errorFlag = 5;
-        }
-        else errorFlag = 5;
+        if (common.n != 1) errorFlag = 7;
+        y = common[0];
 
-        //find x from a
-        common = networkA.nodes[a].dualCnxs;
-        common.delValue(u);
-        common.delValue(v);
-        common.delValue(w);
-        if (common.n != 1) errorFlag = 1;
-        x = common[0];
+        common = networkA.nodes[a].netCnxs;
+        common.delValue(b);
+        common.delValue(c);
+        common.delValue(e);
+        if (common.n != 1) errorFlag = 9;
+        g = common[0];
 
-        if(vContains(networkB.nodes[v].netCnxs,w)) return 1; //v already connected to w
-        if(vCommonValues(networkB.nodes[v].dualCnxs,networkB.nodes[w].dualCnxs).n>1) return 1; //v already shares another node (besides a) with w
-        if(vCommonValues(networkA.nodes[a].dualCnxs,networkA.nodes[d].dualCnxs).n==2 && !vContains(networkA.nodes[a].netCnxs,d)) return 1; //a,d share two rings and not directly connected
+        //Additional error checking including preventing two nodes connecting multiple times
+        if (c == d || e == f) errorFlag = 6; //can simply be triangle edge sharing pair (not an error)
+        if(vContains(networkB.nodes[u].netCnxs,w)) errorFlag=7;
+        if(vContains(networkB.nodes[u].auxCnxs,v)) errorFlag=7;
+        if(vContains(networkB.nodes[w].netCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[w].auxCnxs,x)) errorFlag=7;
 
         if (errorFlag != 0) {
 //            cout << "Note: skip in switch generation 43 with error flag" << " " << errorFlag << endl;
             return 1;
         }
 
-        mixIdsA=VecF<int>(4);
-        mixIdsB=VecF<int>(4);
-        mixIdsA[0]=a;
-        mixIdsA[1]=b;
-        mixIdsA[2]=c;
-        mixIdsA[3]=d;
-        mixIdsB[0]=u;
-        mixIdsB[1]=v;
-        mixIdsB[2]=w;
-        mixIdsB[3]=x;
-        return 0;
+        //check move will not violate dual connectivity limits
+        if (networkB.nodes[u].netCnxs.n == minNodeCnxs || networkB.nodes[v].netCnxs.n == minNodeCnxs
+            || networkB.nodes[w].netCnxs.n == networkB.nodes[w].netCnxs.nMax
+            || networkB.nodes[x].netCnxs.n == networkB.nodes[x].netCnxs.nMax)
+            return 1;
+        else {
+            mixIdsA = VecF<int>(7);
+            mixIdsB = VecF<int>(5);
+            mixIdsA[0] = a;
+            mixIdsA[1] = b;
+            mixIdsA[2] = c;
+            mixIdsA[3] = d;
+            mixIdsA[4] = e;
+            mixIdsA[5] = f;
+            mixIdsA[6] = g;
+            mixIdsB[0] = u;
+            mixIdsB[1] = v;
+            mixIdsB[2] = w;
+            mixIdsB[3] = x;
+            mixIdsB[4] = y;
+            return 0;
+        }
     }
 }
 
@@ -1061,6 +1069,12 @@ void LinkedNetwork::switchCnx43(VecF<int> switchIdsA, VecF<int> switchIdsB) {
     networkB.nodes[w].dualCnxs.insertValue(b,a,e);
     networkB.nodes[x].dualCnxs.insertValue(a,b,d);
 
+    //B-B secondary connectivities
+    //break v-y, swap y->v/x, add x-y
+    networkB.nodes[v].auxCnxs.delValue(y);
+    networkB.nodes[y].auxCnxs.swapValue(v,x);
+    networkB.nodes[x].auxCnxs.addValue(y);
+
     //Apply changes to descriptors due to making connections
     //Network A
     ++networkA.edgeDistribution[na][nd];
@@ -1105,109 +1119,121 @@ void LinkedNetwork::switchCnx43(VecF<int> switchIdsA, VecF<int> switchIdsB) {
 //Mix connectivities to exchange 3/4 coordination nodes
 void LinkedNetwork::mixCnx34(VecF<int> mixIdsA, VecF<int> mixIdsB) {
 
-    //unpack parameters
-    int a,b,c,d;
-    int u,v,w,x;
+    //unpck parameters
+    int a,b,c,d,e,f,g;
+    int u,v,w,x,y;
     a=mixIdsA[0];
     b=mixIdsA[1];
     c=mixIdsA[2];
     d=mixIdsA[3];
+    e=mixIdsA[4];
+    f=mixIdsA[5];
+    g=mixIdsA[6];
     u=mixIdsB[0];
     v=mixIdsB[1];
     w=mixIdsB[2];
     x=mixIdsB[3];
+    y=mixIdsB[4];
 
     //Apply changes to descriptors due to breaking connections
     //For network A node distribution will remain unchanged but edge distribution will change
-    int na, nc;
+    int na, nb;
     na=networkA.nodes[a].netCnxs.n;
-    nc=networkA.nodes[c].netCnxs.n;
+    nb=networkA.nodes[b].netCnxs.n;
     for(int i=0; i<na; ++i){
         int id=networkA.nodes[a].netCnxs[i];
         int nCnx=networkA.nodes[id].netCnxs.n;
         --networkA.edgeDistribution[na][nCnx];
-        if(id!=c) --networkA.edgeDistribution[nCnx][na]; //prevent double counting
+        if(id!=b) --networkA.edgeDistribution[nCnx][na]; //prevent double counting
     }
-    for(int i=0; i<nc; ++i){
-        int id=networkA.nodes[c].netCnxs[i];
+    for(int i=0; i<nb; ++i){
+        int id=networkA.nodes[b].netCnxs[i];
         int nCnx=networkA.nodes[id].netCnxs.n;
-        --networkA.edgeDistribution[nc][nCnx];
-        if(id!=a) --networkA.edgeDistribution[nCnx][nc]; //prevent double counting
+        --networkA.edgeDistribution[nb][nCnx];
+        if(id!=a) --networkA.edgeDistribution[nCnx][nb]; //prevent double counting
     }
 
     //For network B node and edge distribution will change
-    int nu, nv;
-    nu=networkB.nodes[u].netCnxs.n;
+    int nv,nw;
     nv=networkB.nodes[v].netCnxs.n;
-    --networkB.nodeDistribution[nu];
+    nw=networkB.nodes[w].netCnxs.n;
     --networkB.nodeDistribution[nv];
-    for(int i=0; i<nu; ++i){
-        int id=networkB.nodes[u].netCnxs[i];
-        int nCnx=networkB.nodes[id].netCnxs.n;
-        --networkB.edgeDistribution[nu][nCnx];
-        if(id!=v) --networkB.edgeDistribution[nCnx][nu]; //prevent double counting
-    }
+    --networkB.nodeDistribution[nw];
     for(int i=0; i<nv; ++i){
         int id=networkB.nodes[v].netCnxs[i];
         int nCnx=networkB.nodes[id].netCnxs.n;
         --networkB.edgeDistribution[nv][nCnx];
-        if(id!=u) --networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+        if(id!=w) --networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+    }
+    for(int i=0; i<nw; ++i){
+        int id=networkB.nodes[w].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        --networkB.edgeDistribution[nw][nCnx];
+        if(id!=v) --networkB.edgeDistribution[nCnx][nw]; //prevent double counting
     }
 
     //A-A connectivities
-    //break a->b, insert c:a-(b)-d, swap b->a/c
-    networkA.nodes[a].netCnxs.delValue(b);
-    networkA.nodes[c].netCnxs.insertValue(b,a,d);
-    networkA.nodes[b].netCnxs.swapValue(a,c);
+    //break a->e, insert b:a-(e)-f, swap e->a/b
+    networkA.nodes[a].netCnxs.delValue(e);
+    networkA.nodes[b].netCnxs.insertValue(e,a,f);
+    networkA.nodes[e].netCnxs.swapValue(a,b);
 
     //A-B connectvities
-    //break a->u, insert c:u-(v)-w
-    networkA.nodes[a].dualCnxs.delValue(u);
-    networkA.nodes[c].dualCnxs.insertValue(v,u,w);
+    //break a->v, insert b:u-(w)-v
+    networkA.nodes[a].dualCnxs.delValue(v);
+    networkA.nodes[b].dualCnxs.insertValue(w,u,v);
 
     //B-B connectivities
-    //break u->w, insert v:u-(w)-x, swap w->u/v
-    networkB.nodes[u].netCnxs.delValue(w);
-    networkB.nodes[v].netCnxs.insertValue(w,u,x);
-    networkB.nodes[w].netCnxs.swapValue(u,v);
+    //break v->u, insert w:y-(u)-v, swap u->v/w
+    networkB.nodes[v].netCnxs.delValue(u);
+    networkB.nodes[w].netCnxs.insertValue(u,y,v);
+    networkB.nodes[u].netCnxs.swapValue(v,w);
 
     //B-A connectivities
-    //break u->a, insert v:a-(c)-b
-    networkB.nodes[u].dualCnxs.delValue(a);
-    networkB.nodes[v].dualCnxs.insertValue(c,a,b);
+    //break v->a, insert w:a-(b)-e
+    networkB.nodes[v].dualCnxs.delValue(a);
+    networkB.nodes[w].dualCnxs.insertValue(b,a,e);
+
+    //B-B secondary connectivities
+    //break y-v, u-z, swap u->w/v, v->y/u, w->u/x, add x-w
+    networkB.nodes[y].auxCnxs.delValue(v);
+    networkB.nodes[u].auxCnxs.swapValue(w,v);
+    networkB.nodes[w].auxCnxs.swapValue(u,x);
+    networkB.nodes[v].auxCnxs.swapValue(y,u);
+    networkB.nodes[x].auxCnxs.addValue(w);
 
     //Apply changes to descriptors due to making connections
     //Network A
     na=networkA.nodes[a].netCnxs.n;
-    nc=networkA.nodes[c].netCnxs.n;
+    nb=networkA.nodes[b].netCnxs.n;
     for(int i=0; i<na; ++i){
         int id=networkA.nodes[a].netCnxs[i];
         int nCnx=networkA.nodes[id].netCnxs.n;
         ++networkA.edgeDistribution[na][nCnx];
-        if(id!=c) ++networkA.edgeDistribution[nCnx][na]; //prevent double counting
+        if(id!=b) ++networkA.edgeDistribution[nCnx][na]; //prevent double counting
     }
-    for(int i=0; i<nc; ++i){
-        int id=networkA.nodes[c].netCnxs[i];
+    for(int i=0; i<nb; ++i){
+        int id=networkA.nodes[b].netCnxs[i];
         int nCnx=networkA.nodes[id].netCnxs.n;
-        ++networkA.edgeDistribution[nc][nCnx];
-        if(id!=a) ++networkA.edgeDistribution[nCnx][nc]; //prevent double counting
+        ++networkA.edgeDistribution[nb][nCnx];
+        if(id!=a) ++networkA.edgeDistribution[nCnx][nb]; //prevent double counting
     }
     //Network B
-    nu=networkB.nodes[u].netCnxs.n;
     nv=networkB.nodes[v].netCnxs.n;
-    ++networkB.nodeDistribution[nu];
+    nw=networkB.nodes[w].netCnxs.n;
     ++networkB.nodeDistribution[nv];
-    for(int i=0; i<nu; ++i){
-        int id=networkB.nodes[u].netCnxs[i];
-        int nCnx=networkB.nodes[id].netCnxs.n;
-        ++networkB.edgeDistribution[nu][nCnx];
-        if(id!=v) ++networkB.edgeDistribution[nCnx][nu]; //prevent double counting
-    }
+    ++networkB.nodeDistribution[nw];
     for(int i=0; i<nv; ++i){
         int id=networkB.nodes[v].netCnxs[i];
         int nCnx=networkB.nodes[id].netCnxs.n;
         ++networkB.edgeDistribution[nv][nCnx];
-        if(id!=u) ++networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+        if(id!=w) ++networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+    }
+    for(int i=0; i<nw; ++i){
+        int id=networkB.nodes[w].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        ++networkB.edgeDistribution[nw][nCnx];
+        if(id!=v) ++networkB.edgeDistribution[nCnx][nw]; //prevent double counting
     }
 }
 
@@ -1394,7 +1420,7 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
      * 4) accept or reject */
 
     //Select valid random connection - that will not violate connection limits
-    int a,b,c,u,v;
+    int a,b,u,v;
     VecF<int> mixIdsA, mixIdsB;
     int validMove;
     int cnxType;
@@ -1404,7 +1430,6 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
         if(validMove==0) break;
     }
     if(validMove==1) throw string("Cannot find any valid switch moves");
-    c=mixIdsA[2];
 
     //Save current state
     double saveEnergy=energy;
@@ -1422,7 +1447,7 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     VecF<int> optStatus;
     mixCnx34(mixIdsA,mixIdsB);
     //Unrestricted local optimisation of switched atoms
-    optStatus=localGeometryOptimisation(a,c,1,false,false); //bond switch atoms only
+    optStatus=localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
     if(potParamsD[1]==1) {
         for (int i = 0; i < mixIdsA.n; ++i) {
             geometryOK = checkConvexity(mixIdsA[i]);
@@ -1433,7 +1458,7 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
 
     //Restricted optimisation of local region
     if(geometryOK) {
-        optStatus = localGeometryOptimisation(a, c, goptParamsA[1], potParamsD[0], potParamsD[1]); //wider area
+        optStatus = localGeometryOptimisation(a, b, goptParamsA[1], potParamsD[0], potParamsD[1]); //wider area
         energy = globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     }
     else energy=numeric_limits<double>::infinity();

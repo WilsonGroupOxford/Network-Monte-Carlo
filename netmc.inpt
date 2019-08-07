@@ -5,7 +5,7 @@ Network Properties
 100         number of rings
 3           min ring size
 20          max ring size
-mix_0.6176      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
+square mix_0.6176      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
 default         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
@@ -18,7 +18,7 @@ Monte Carlo Energy Search
 -0.01           temperature increment (10^x)
 10        thermalisation temperature
 0         steps per temperature
-10000           initial thermalisation steps
+2000           initial thermalisation steps
 --------------------------------------------------
 Monte Carlo Cost Search
 0         randomisation steps
