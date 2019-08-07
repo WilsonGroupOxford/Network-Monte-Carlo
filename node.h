@@ -20,10 +20,11 @@ public:
     VecF<double> crd; //coordinate
     VecR<int> netCnxs; //connections to nodes in network
     VecR<int> dualCnxs; //connections to nodes in dual
+    VecR<int> auxCnxs; //free form additional connections to be repurposed as needed
 
     //Constructors, copy constructor, assignment operator
     Node();
-    Node(int nodeId, int maxNetCnxs, int maxDualCnxs);
+    Node(int nodeId, int maxNetCnxs, int maxDualCnxs, int maxAuxCnxs);
     Node(const Node& source);
     Node& operator = (const Node& source);
 };

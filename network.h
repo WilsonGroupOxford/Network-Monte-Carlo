@@ -41,6 +41,7 @@ public:
 
     //Member Functions
     Network constructDual(int maxCnxs); //make dual graph
+    void generateAuxConnections(Network dualNetwork, int auxType); //generate auxilary connections
     void rescale(double scaleFactor); //rescale coordinates
     void project(string projType, double param); //project lattice onto different geometry
     void findLocalRegion(int a, int b, int extent, VecR<int>& local, VecR<int>& fixedInner, VecR<int>& fixedOuter);

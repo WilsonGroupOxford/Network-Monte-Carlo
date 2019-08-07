@@ -39,6 +39,7 @@ LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int maxACnxs, int maxB
         networkB=Network(nodesA,"mixTS",maxBCnxs,mix);
         networkA=networkB.constructDual(maxACnxs);
     }
+    networkB.generateAuxConnections(networkA,0);
     minNodeCnxs=minCnxs;
 }
 
@@ -490,6 +491,14 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         if(common.n!=1) errorFlag=10;
         h=common[0];
 
+        //Additional error checking including preventing two nodes connecting multiple times
+        if(c==d || e==f) errorFlag=6;
+        if(vContains(networkB.nodes[w].netCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[y].netCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[y].auxCnxs,x)) errorFlag=7;
+        if(vContains(networkB.nodes[z].netCnxs,w)) errorFlag=7;
+        if(vContains(networkB.nodes[z].auxCnxs,w)) errorFlag=7;
+
         if(errorFlag!=0){
 //            cout<<"Note: skip in switch generation 44"<<endl;
             return 1;
@@ -910,6 +919,15 @@ void LinkedNetwork::switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB) {
     networkB.nodes[v].dualCnxs.delValue(a);
     networkB.nodes[w].dualCnxs.insertValue(b,a,e);
     networkB.nodes[x].dualCnxs.insertValue(a,b,d);
+
+    //B-B secondary connectivities
+    //break v-y, u-z, swap y->v/x, z->u/w, add x-y, w-z
+    networkB.nodes[v].auxCnxs.delValue(y);
+    networkB.nodes[u].auxCnxs.delValue(z);
+    networkB.nodes[y].auxCnxs.swapValue(v,x);
+    networkB.nodes[z].auxCnxs.swapValue(u,w);
+    networkB.nodes[x].auxCnxs.addValue(y);
+    networkB.nodes[w].auxCnxs.addValue(z);
 
     //Apply changes to descriptors due to making connections
     //Network B
@@ -2120,8 +2138,26 @@ bool LinkedNetwork::checkCnxConsistency() {
         }
     }
 
+    //check expected number of auxiliary connections
+    bool numAux=true;
+    for(int i=0; i<networkB.nodes.n; ++i){
+        int expAux = 0;
+        for(int j=0; j<networkB.nodes[i].dualCnxs.n; ++j) expAux+=networkA.nodes[networkB.nodes[i].dualCnxs[j]].netCnxs.n-3;
+        if(networkB.nodes[i].auxCnxs.n!=expAux) numAux=false;
+    }
+
+    //check mutual auxiliary connections
+    bool mutualAuxCnx=true;
+    for(int i=0; i<networkB.nodes.n; ++i){
+        id0=i;
+        for(int j=0; j<networkB.nodes[i].auxCnxs.n; ++j){
+            id1=networkB.nodes[i].auxCnxs[j];
+            mutualAuxCnx=vContains(networkB.nodes[id1].auxCnxs,id0);
+        }
+    }
+
     //overall flag
-    bool consistent=netDualEquality*mutualNetCnx*mutualDualCnx*nbNetCnx*nbDualCnx;
+    bool consistent=netDualEquality*mutualNetCnx*mutualDualCnx*nbNetCnx*nbDualCnx*numAux*mutualAuxCnx;
 
     return consistent;
 }

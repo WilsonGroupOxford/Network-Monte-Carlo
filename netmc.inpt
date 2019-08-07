@@ -1,11 +1,11 @@
 I/0
-./output_files/test      output prefix
+./output_files/testt      output prefix
 --------------------------------------------------
 Network Properties
 100         number of rings
 3           min ring size
 20          max ring size
-hexagonal mix_0.6176      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
+mix_0.6176      lattice (square,hexagonal,goldberg,inv_cubic,mix_X)
 default         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
@@ -16,7 +16,7 @@ Monte Carlo Energy Search
 1          start temperature (10^x)
 -3    end temperature (10^x)
 -0.01           temperature increment (10^x)
-0        thermalisation temperature
+10        thermalisation temperature
 0         steps per temperature
 10000           initial thermalisation steps
 --------------------------------------------------

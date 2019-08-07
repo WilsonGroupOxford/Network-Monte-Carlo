@@ -9,7 +9,7 @@ Network::Network() {
 Network::Network(int nNodes, int maxCnxs) {
     nodes=VecR<Node>(0,nNodes);
     for(int i=0; i<nNodes; ++i){
-        Node node(i,maxCnxs,maxCnxs);
+        Node node(i,maxCnxs,maxCnxs,0);
         nodes.addValue(node);
     }
 }
@@ -79,7 +79,7 @@ Network::Network(string prefix) {
     ss>>rpb[1];
     if(geometryCode=="3DE" || geometryCode=="2DS") ss>>rpb[2];
     for(int i=0; i<nodes.nMax; ++i){
-        Node node(i,maxNetCnxs,maxDualCnxs);
+        Node node(i,maxNetCnxs,maxDualCnxs,0);
         nodes.addValue(node);
     }
     auxFile.close();
@@ -141,7 +141,7 @@ void Network::initialiseSquareLattice(int dim, int& maxCnxs) {
     //make 4 coordinate nodes
     if(maxCnxs<4) maxCnxs=4; //need at least 4 connections
     for(int i=0; i<nodes.nMax; ++i){
-        Node node(i,maxCnxs,maxCnxs);
+        Node node(i,maxCnxs,maxCnxs,0);
         nodes.addValue(node);
     }
 
@@ -201,7 +201,7 @@ void Network::initialiseTriangularLattice(int dim, int& maxCnxs) {
     //make 6 coordinate nodes
     if(maxCnxs<6) maxCnxs=6; //need at least 6 connections
     for(int i=0; i<nodes.nMax; ++i){
-        Node node(i,maxCnxs,maxCnxs);
+        Node node(i,maxCnxs,maxCnxs,0);
         nodes.addValue(node);
     }
 
@@ -305,7 +305,7 @@ void Network::initialiseMixedTSLattice(int dim, int &maxCnxs, double mixProporti
     //make 6 coordinate nodes
     if(maxCnxs<6) maxCnxs=6; //need at least 6 connections
     for(int i=0; i<nodes.nMax; ++i){
-        Node node(i,maxCnxs,maxCnxs);
+        Node node(i,maxCnxs,maxCnxs,0);
         nodes.addValue(node);
     }
 
@@ -519,7 +519,7 @@ void Network::initialiseCubicLattice(int nNodes, int& maxCnxs) {
     //make 4 coordinate nodes
     if(maxCnxs<4) maxCnxs=4; //need at least 4 connections
     for(int i=0; i<nodes.nMax; ++i){
-        Node node(i,maxCnxs,maxCnxs);
+        Node node(i,maxCnxs,maxCnxs,0);
         nodes.addValue(node);
     }
 
@@ -751,7 +751,7 @@ void Network::initialiseGeodesicLattice(int nNodes, int& maxCnxs) {
     //make 4 coordinate nodes
     if (maxCnxs < 6) maxCnxs = 6; //need at least 6 connections
     for (int i = 0; i < nodes.nMax; ++i) {
-        Node node(i, maxCnxs, maxCnxs);
+        Node node(i, maxCnxs, maxCnxs, 0);
         nodes.addValue(node);
     }
 
@@ -1079,6 +1079,31 @@ Network Network::constructDual(int maxCnxs) {
     dualNetwork.initialiseDescriptors(maxCnxs);
 
     return dualNetwork;
+}
+
+//Generate auxilary connections
+void Network::generateAuxConnections(Network dualNetwork, int auxType) {
+
+    //generate second order network connections (share single point in dual)
+    if(auxType==0){
+        //increase size of aux containers
+        for(int i=0; i<nodes.n; ++i) nodes[i].auxCnxs = VecR<int>(0,nodes[i].dualCnxs.nMax);
+
+        //generate unordered second order connections
+        for(int i=0; i<dualNetwork.nodes.n; ++i){
+            VecR<int> dualCnxs=dualNetwork.nodes[i].dualCnxs;
+            for(int j=0; j<dualCnxs.n-1; ++j){
+                int id0=dualCnxs[j];
+                for(int k=j+1; k<dualCnxs.n; ++k){
+                    int id1=dualCnxs[k];
+                    if(!vContains(nodes[id0].netCnxs,id1) && !vContains(nodes[id0].auxCnxs,id1)){
+                        nodes[id0].auxCnxs.addValue(id1);
+                        nodes[id1].auxCnxs.addValue(id0);
+                    }
+                }
+            }
+        }
+    }
 }
 
 //Rescale coordinates and lattice dimensions
