@@ -42,7 +42,7 @@ public:
     //Member Functions
     void initialisePotentialModel(double ak, double bk, double ck=0.0, int convex=0); //set up potential model
     void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters
-    void initialiseMonteCarlo(double temperature, int seed=0); //set up monte carlo
+    void initialiseMonteCarlo(double temperature, int seed=0, bool globalOpt=false); //set up monte carlo
     void initialiseCostFunction(double temperature, int seed, double pk, double rk); //set up cost function
     void makeCrystal(string crystalCode, string lattice); //perform defined moves to make specific crystal
     void rescale(double scaleFactor); //rescale lattice dimensions
@@ -75,6 +75,7 @@ public:
     double getAboavWeaireEstimate(string lattice); //get estimate of aw alpha parameter from assortativity
     VecF<double> getEntropy(string lattice); //get node and edge distribution entropy
     VecF<double> getOptimisationGeometry(VecF<double> &lenHist, VecF<double> &angHist); //get bond/angle mean and standard deviation
+    void getRingAreas(VecF<double> &areaSum, VecF<double> &areaSqSum); //get sum of areas and squared areas of each ring size
     double getCluster(string lattice, int nodeCnd); //get cluster statistics for given node coordination
     bool checkConsistency(); //check networks are consistent
     bool checkCnxConsistency(); //check for mutual connections

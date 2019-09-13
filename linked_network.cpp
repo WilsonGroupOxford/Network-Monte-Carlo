@@ -18,6 +18,12 @@ LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int maxACnxs, int maxB
         networkA=networkB.constructDual(maxACnxs);
         rescale(sqrt(3.0));
     }
+    else if(latticeA=="cairo"){
+        networkB=Network(nodesA,"snubsquare",maxBCnxs);
+        networkA=networkB.constructDual(maxACnxs);
+        rescale(6.0/(3.0+sqrt(3.0)));
+        rescale((3.0+sqrt(3.0))/(8.0-2*sqrt(3.0)));
+    }
     else if(latticeA=="cubic"){
         networkA=Network(nodesA,"cubic",maxACnxs);
         networkB=networkA.constructDual(maxBCnxs);
@@ -104,8 +110,9 @@ void LinkedNetwork::initialiseGeometryOpt(int iterations, double tau, double tol
 }
 
 //Set up monte carlo and random number generators
-void LinkedNetwork::initialiseMonteCarlo(double temperature, int seed) {
+void LinkedNetwork::initialiseMonteCarlo(double temperature, int seed, bool globalOpt) {
 
+    if(globalOpt) globalGeometryOptimisation(true,true);
     double energy=globalPotentialEnergy(potParamsD[0],potParamsD[1]);
     mc=Metropolis(seed,temperature,energy);
     mtGen.seed(seed);
@@ -694,10 +701,7 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         }
 
         //check move will not violate dual connectivity limits
-        if (networkB.nodes[u].netCnxs.n == minNodeCnxs || networkB.nodes[v].netCnxs.n == minNodeCnxs
-            || networkB.nodes[w].netCnxs.n == networkB.nodes[w].netCnxs.nMax
-            || networkB.nodes[x].netCnxs.n == networkB.nodes[x].netCnxs.nMax)
-            return 1;
+        if (networkB.nodes[v].netCnxs.n == minNodeCnxs || networkB.nodes[w].netCnxs.n == networkB.nodes[w].netCnxs.nMax) return 1;
         else {
             mixIdsA = VecF<int>(7);
             mixIdsB = VecF<int>(5);
@@ -2393,6 +2397,36 @@ VecF<double> LinkedNetwork::getOptimisationGeometry(VecF<double> &lenHist, VecF<
     return optGeom;
 }
 
+//Get sum of areas and squared areas for each ring size
+void LinkedNetwork::getRingAreas(VecF<double> &areaSum, VecF<double> &areaSqSum) {
+
+    //Loop over rings, recentre and apply shoelace formula
+    areaSum = 0.0;
+    areaSqSum = 0.0;
+    double pbx=networkA.pb[0],pby=networkA.pb[1];
+    double pbrx=networkA.rpb[0],pbry=networkA.rpb[1];
+    for(int i=0; i<networkB.nodes.n; ++i){
+        VecR<int> ids = networkB.nodes[i].dualCnxs;
+        int ringSize = ids.n;
+        VecF<double> xCrds(ringSize), yCrds(ringSize);
+        for(int j=0; j<ringSize; ++j){
+            xCrds[j] = crdsA[2*ids[j]];
+            yCrds[j] = crdsA[2*ids[j]+1];
+        }
+        xCrds = xCrds-xCrds[0];
+        yCrds = yCrds-yCrds[0];
+        for(int j=1; j<ringSize; ++j){
+            xCrds[j]-=pbx*nearbyint(xCrds[j]*pbrx);
+            yCrds[j]-=pby*nearbyint(yCrds[j]*pbry);
+        }
+        double a = 0.0;
+        for(int j=0; j<ringSize-1; ++j) a += xCrds[j]*yCrds[j+1];
+        for(int j=0; j<ringSize-1; ++j) a -= xCrds[j+1]*yCrds[j];
+        a = 0.5*fabs(a+xCrds[ringSize-1]*yCrds[0]-xCrds[0]*yCrds[ringSize-1]);
+        areaSum[ringSize] += a;
+        areaSqSum[ringSize] += a*a;
+    }
+}
 
 //Wrap coordinates of lattice A if periodic
 void LinkedNetwork::wrapCoordinates() {

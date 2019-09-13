@@ -173,17 +173,17 @@ int main(){
         logfile.write("Monte carlo effective temperature:", costT);
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
+    bool mixedLattice=false; //whether mixed coordination lattice
+    if(lattice.substr(0,3)=="mix" || lattice.substr(0,5)=="cairo") mixedLattice=true;
     LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
     network.write("./output_files/pre");
     network.initialisePotentialModel(potAK,potBK,potCK,potConvex);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
-    network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed);
+    network.initialiseMonteCarlo(pow(10,mcStartT),randomSeed,mixedLattice);
     network.initialiseCostFunction(costT,randomSeed,costPK,costRK);
     if(crystal!="default") network.makeCrystal(crystal,lattice);
     if(lattice=="goldberg" || lattice=="inv_cubic") network.optimalProjection("sphere");
-    bool mixedLattice; //whether mixed coordination lattice
-    if(lattice.substr(0,3)=="mix"){//get statistics on number of 3/4 coordinate nodes for mixed lattice
-        mixedLattice=true;
+    if(mixedLattice){//get statistics on number of 3/4 coordinate nodes for mixed lattice
         double mixA=network.networkA.nodes.n,mixA3=0,mixA4=0;
         for(int i=0; i<mixA; ++i){
             if(network.networkA.nodes[i].netCnxs.n==3) ++mixA3;
@@ -198,7 +198,6 @@ int main(){
         logfile.write("Mixed lattice 3 coordinate nodes:",mixA3/mixA);
         logfile.write("Mixed lattice 4 coordinate nodes:",mixA4/mixA);
     }
-    else mixedLattice=false;
     --logfile.currIndent;
     logfile.write("Network initialised");
     logfile.separator();
@@ -214,6 +213,7 @@ int main(){
     OutputFile outGeometry(prefixOut+"_geometry.out");
     OutputFile outEmatrix(prefixOut+"_ematrix.out");
     OutputFile outGeomHist(prefixOut+"_geomhist.out");
+    OutputFile outAreas(prefixOut+"_areas.out");
     OutputFile outCluster(prefixOut+"_cluster.out");
     outGeometry.initVariables(6,4,60,20);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
@@ -236,6 +236,7 @@ int main(){
     angHist=0.0;
 
     //Run monte carlo
+    cout<<network.mc.getEnergy()<<endl;
     int accepted=0,optIterations=0;
     VecF<int> optCodes(5);
     optCodes=0;
@@ -270,6 +271,7 @@ int main(){
                 VecF<double> aw = network.getAboavWeaire("B");
                 VecF<double> s = network.getEntropy("B");
                 VecF<double> corr(5);
+                VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
                 corr[0] = r;
                 corr[1] = aEst;
                 corr[2] = aw[0];
@@ -278,12 +280,15 @@ int main(){
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                network.getRingAreas(a,aSq);
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(mcT);
                 outGeometry.writeRowVector(geomStats);
+                outAreas.writeRowVector(a);
+                outAreas.writeRowVector(aSq);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                 if(mixedLattice) {
                     VecF<double> cluster(3);
@@ -329,6 +334,7 @@ int main(){
                     VecF<double> aw = network.getAboavWeaire("B");
                     VecF<double> s = network.getEntropy("B");
                     VecF<double> corr(5);
+                    VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
                     corr[0] = r;
                     corr[1] = aEst;
                     corr[2] = aw[0];
@@ -336,12 +342,15 @@ int main(){
                     corr[4] = aw[2];
                     VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                     VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                    network.getRingAreas(a,aSq);
                     outRingStats.writeRowVector(ringStats);
                     outCorr.writeRowVector(corr);
                     outEnergy.write(energy);
                     outEntropy.writeRowVector(s);
                     outTemperature.write(mcT);
                     outGeometry.writeRowVector(geomStats);
+                    outAreas.writeRowVector(a);
+                    outAreas.writeRowVector(aSq);
                     for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                     if(mixedLattice) {
                         VecF<double> cluster(3);
@@ -412,6 +421,7 @@ int main(){
                 VecF<double> aw = network.getAboavWeaire("B");
                 VecF<double> s = network.getEntropy("B");
                 VecF<double> corr(5);
+                VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
                 corr[0] = r;
                 corr[1] = aEst;
                 corr[2] = aw[0];
@@ -420,12 +430,15 @@ int main(){
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                network.getRingAreas(a,aSq);
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
                 outEnergy.write(energy);
                 outEntropy.writeRowVector(s);
                 outTemperature.write(costT);
                 outGeometry.writeRowVector(geomStats);
+                outAreas.writeRowVector(a);
+                outAreas.writeRowVector(aSq);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                 if(mixedLattice) {
                     VecF<double> cluster(3);
@@ -476,6 +489,7 @@ int main(){
                         VecF<double> aw = network.getAboavWeaire("B");
                         VecF<double> s = network.getEntropy("B");
                         VecF<double> corr(5);
+                        VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
                         corr[0] = r;
                         corr[1] = aEst;
                         corr[2] = aw[0];
@@ -483,12 +497,15 @@ int main(){
                         corr[4] = aw[2];
                         VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                         VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                        network.getRingAreas(a,aSq);
                         outRingStats.writeRowVector(ringStats);
                         outCorr.writeRowVector(corr);
                         outEnergy.write(energy);
                         outEntropy.writeRowVector(s);
                         outTemperature.write(costT);
                         outGeometry.writeRowVector(geomStats);
+                        outAreas.writeRowVector(a);
+                        outAreas.writeRowVector(aSq);
                         for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                         if(mixedLattice) {
                             VecF<double> cluster(3);

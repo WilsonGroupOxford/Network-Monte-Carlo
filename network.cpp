@@ -18,6 +18,7 @@ Network::Network(int nNodes, int maxCnxs) {
 Network::Network(int nNodes, string lattice, int maxCnxs, double mixProportion) {
     if(lattice=="square") initialiseSquareLattice(sqrt(nNodes),maxCnxs);
     else if(lattice=="triangular") initialiseTriangularLattice(sqrt(nNodes),maxCnxs);
+    else if(lattice=="snubsquare") initialiseSnubSquareLattice(sqrt(nNodes/8),maxCnxs);
     else if(lattice=="mixTS") initialiseMixedTSLattice(sqrt(nNodes),maxCnxs,mixProportion);
     else if(lattice=="cubic") initialiseCubicLattice(nNodes,maxCnxs);
     else if(lattice=="geodesic") initialiseGeodesicLattice(nNodes,maxCnxs);
@@ -288,6 +289,167 @@ void Network::initialiseTriangularLattice(int dim, int& maxCnxs) {
             ++id;
         }
     }
+}
+
+//Initialise snub square lattice of periodic 5-coordinate nodes
+void Network::initialiseSnubSquareLattice(int dim, int& maxCnxs) {
+    geometryCode="2DE"; //2D euclidean
+    int xDim=dim,yDim=dim*2;
+    int dimSq4=4*xDim*yDim;
+    int dim4=4*xDim;
+    nodes=VecR<Node>(0,dimSq4);
+
+    //make 5 coordinate nodes
+    if(maxCnxs<5) maxCnxs=5; //need at least 5 connections
+    for(int i=0; i<nodes.nMax; ++i){
+        Node node(i,maxCnxs,maxCnxs,0);
+        nodes.addValue(node);
+    }
+
+    //assign coordinates in layers with unit bond lengths
+    VecF<double> c(2);
+    double dxa=sqrt(3.0)/2;
+    double dxe=1.0;
+    double dya=0.5;
+    double dye=0.5+sqrt(3.0)/2;
+    pb=VecF<double>(2);
+    rpb=VecF<double>(2);
+    pb[0]=xDim*(dxa*2+dxe);
+    pb[1]=yDim*dye;
+    rpb[0]=1.0/pb[0];
+    rpb[1]=1.0/pb[1];
+    for(int y=0; y<yDim; ++y){
+        c[1]=dye*(y+0.5);
+        for(int x=0; x<xDim; ++x){
+            c[0]=x*(2*dxa+dxe)+(y%2)*(dxe/2+dxa);
+            nodes[y*dim4+x*4+0].crd=c;
+            c[0]+=dxa;
+            c[1]+=dya;
+            nodes[y*dim4+x*4+1].crd=c;
+            c[1]-=2*dya;
+            nodes[y*dim4+x*4+2].crd=c;
+            c[0]+=dxa;
+            c[1]+=dya;
+            nodes[y*dim4+x*4+3].crd=c;
+        }
+    }
+
+    //make connections to nodes in clockwise order
+    int id=0, cnx;
+    for(int y=0; y<yDim; ++y){
+        for(int x=0; x<xDim; ++x){
+            //environment 0
+            cnx=y*dim4+(id+dim4-1)%dim4;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(y+1)*dim4+((id%dim4-2)+dim4)%dim4;
+            else cnx=(id+dim4+2)%dimSq4;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id+1;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id+2;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(((y-1)*dim4+((id%dim4-3)+dim4)%dim4)+dimSq4)%dimSq4;
+            else cnx=id-dim4+1;
+            nodes[id].netCnxs.addValue(cnx);
+            ++id;
+            //environment 1
+            cnx=id-1;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(y+1)*dim4+((id%dim4-2)+dim4)%dim4;
+            else cnx=(id+dim4+2)%dimSq4;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(y+1)*dim4+((id%dim4-1)+dim4)%dim4;
+            else cnx=((y+1)*dim4+(id+3)%dim4)%dimSq4;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id+2;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id+1;
+            nodes[id].netCnxs.addValue(cnx);
+            ++id;
+            //environment 2
+            cnx=id-2;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id-1;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id+1;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(((y-1)*dim4+((id%dim4-2)+dim4)%dim4)+dimSq4)%dimSq4;
+            else cnx=(y-1)*dim4+((id%dim4+2)+dim4)%dim4;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(((y-1)*dim4+((id%dim4-3)+dim4)%dim4)+dimSq4)%dimSq4;
+            else cnx=(y-1)*dim4+((id%dim4+1)+dim4)%dim4;
+            nodes[id].netCnxs.addValue(cnx);
+            ++id;
+            //environment 3
+            cnx=id-1;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=id-2;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(y+1)*dim4+((id%dim4-1)+dim4)%dim4;
+            else cnx=((y+1)*dim4+((id%dim4+3)+dim4)%dim4)%dimSq4;
+            nodes[id].netCnxs.addValue(cnx);
+            cnx=y*dim4+(id+dim4+1)%dim4;
+            nodes[id].netCnxs.addValue(cnx);
+            if(y%2==0) cnx=(((y-1)*dim4+((id%dim4-2)+dim4)%dim4)+dimSq4)%dimSq4;
+            else cnx=(y-1)*dim4+((id%dim4+2)+dim4)%dim4;
+            nodes[id].netCnxs.addValue(cnx);
+            ++id;
+        }
+    }
+
+    //make connections to dual nodes in clockwise order
+    //find all rings and assign code and id
+    map<string,int> ringCodes;
+    int id0,id1,id2,id3;
+    int ringId=0;
+    for(int i=0; i<nodes.n; ++i){
+        id0=i;
+        for(int j=0; j<5; ++j){
+            id1=nodes[i].netCnxs[j];
+            id2=nodes[i].netCnxs[(j+1)%5];
+            VecR<int> ringPath(0,4);
+            ringPath.addValue(i);
+            ringPath.addValue(id1);
+            ringPath.addValue(id2);
+            if(!vContains(nodes[id1].netCnxs,id2)){
+                VecR<int> common=vCommonValues(nodes[id1].netCnxs,nodes[id2].netCnxs);
+                common.delValue(id0);
+                id3=common[0];
+                ringPath.addValue(id3);
+            }
+            ringPath=vSort(ringPath);
+            string rCode="";
+            for(int j=0; j<ringPath.n; ++j) rCode += "#" + to_string(ringPath[j]);
+            if(ringCodes.count(rCode)==0){
+                ringCodes[rCode]=ringId;
+                ++ringId;
+            }
+        }
+    }
+    //assign ring ids
+    for(int i=0; i<nodes.n; ++i) {
+        id0 = i;
+        for (int j = 0; j < 5; ++j) {
+            id1 = nodes[i].netCnxs[j];
+            id2 = nodes[i].netCnxs[(j + 1) % 5];
+            VecR<int> ringPath(0, 4);
+            ringPath.addValue(i);
+            ringPath.addValue(id1);
+            ringPath.addValue(id2);
+            if (!vContains(nodes[id1].netCnxs, id2)) {
+                VecR<int> common = vCommonValues(nodes[id1].netCnxs, nodes[id2].netCnxs);
+                common.delValue(id0);
+                id3 = common[0];
+                ringPath.addValue(id3);
+            }
+            ringPath = vSort(ringPath);
+            string rCode= "";
+            for(int j=0; j<ringPath.n; ++j) rCode += "#" + to_string(ringPath[j]);
+            ringId=ringCodes.at(rCode);
+            nodes[i].dualCnxs.addValue(ringId);
+        }
+    }
+
 }
 
 //Initialise mixed triangular and square lattices

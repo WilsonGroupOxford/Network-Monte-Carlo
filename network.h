@@ -19,6 +19,7 @@ private:
     //Default lattices
     void initialiseSquareLattice(int dim, int& maxCnxs); //4 coordinate nodes, forming periodic square lattice
     void initialiseTriangularLattice(int dim, int& maxCnxs); //6 coordinate nodes, forming periodic square lattice
+    void initialiseSnubSquareLattice(int dim, int& maxCnxs); //5 coordinate nodes, forming periodic snub square lattice
     void initialiseMixedTSLattice(int dim, int& maxCnxs, double mixProportion); //4&6 coordinate nodes, forming mixed triangular and square lattice
     void initialiseCubicLattice(int nNodes, int& maxCnxs); //3&4 coordinate nodes, forming cubic lattice
     void initialiseGeodesicLattice(int nNodes, int& maxCnxs); //5&6 coordinate nodes, forming geodesic lattice
