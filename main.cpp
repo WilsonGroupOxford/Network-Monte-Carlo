@@ -121,7 +121,6 @@ int main(){
     getline(inputFile,skip);
     getline(inputFile,skip);
     logfile.write("Potential parameters read");
-
     //Geometry optimisation
     int goptLocalIt, goptGlobalIt, goptLocalSize;
     double goptTau, goptTol;
@@ -139,11 +138,14 @@ int main(){
     getline(inputFile,skip);
     logfile.write("Geometry optimisation parameters read");
     //Analysis
-    int analysisFreq,writeStructures;
+    int analysisFreq,writeStructures,structureFreq;
     getline(inputFile,line);
     istringstream(line)>>analysisFreq;
     getline(inputFile,line);
     istringstream(line)>>writeStructures;
+    getline(inputFile,line);
+    istringstream(line)>>structureFreq;
+    getline(inputFile,line);
     logfile.write("Write parameters read");
     inputFile.close();
     --logfile.currIndent;
@@ -359,10 +361,10 @@ int main(){
                         cluster[2] = network.getAssortativity("A");
                         outCluster.writeRowVector(cluster);
                     }
-                    if(writeStructures) {
-                        network.syncCoordinates();
-                        network.write(prefixOut+"_t"+to_string(t)+"_"+to_string(i));
-                    }
+                }
+                if (i%structureFreq==0 && writeStructures==1) {
+                    network.syncCoordinates();
+                    network.write(prefixOut+"_t"+to_string(t)+"_"+to_string(i));
                 }
             }
             --logfile.currIndent;
@@ -514,10 +516,10 @@ int main(){
                             cluster[2] = network.getAssortativity("A");
                             outCluster.writeRowVector(cluster);
                         }
-                        if(writeStructures) {
-                            network.syncCoordinates();
-                            network.write(prefixOut+"_"+to_string(i));
-                        }
+                    }
+                    if (i%structureFreq==0 && writeStructures==0) {
+                        network.syncCoordinates();
+                        network.write(prefixOut+"_t"+to_string(r)+"_"+to_string(i));
                     }
                 }
                 --logfile.currIndent;

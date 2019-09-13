@@ -50,6 +50,7 @@ Geometry Optimisation
 5       local region size
 --------------------------------------------------
 Analysis
-1          write frequency
-0          write sampling structures
+1          analysis write frequency
+1          write sampling structures
+10        structure write frequency
 --------------------------------------------------
