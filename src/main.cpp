@@ -219,6 +219,7 @@ int main(){
     OutputFile outClusterA(prefixOut+"_cluster_a.out");
     OutputFile outClusterB(prefixOut+"_cluster_b.out");
     outGeometry.initVariables(6,4,60,20);
+    outAreas.initVariables(6,4,60,30);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
     outGeomHist.initVariables(6,4,60,20);
     outClusterB.initVariables(1,4,60,10);
