@@ -1490,9 +1490,85 @@ VecF<double> Network::entropy() {
 }
 
 //Get cluster statistics for given node coordination
-double Network::cluster(int nodeCnd) {
+VecF<int> Network::maxClusters(int minCnd, int maxCnd, int minInnerCnxs, int minOuterCnxs) {
 
-    //Indentify nodes with the required coordination
+    //Loop over each coordination size
+    VecF<int> maxClusters((maxCnd-minCnd)+1);
+    for(int cnd=minCnd, cndIndex=0; cnd<=maxCnd; ++cnd, ++cndIndex){
+
+        //Identify nodes with the required coordination and similarly coordinated neighbours
+        VecF<int> innerNodes(nodes.n);
+        VecF<int> outerNodes(nodes.n);
+        for(int i=0; i<nodes.n; ++i){
+            if(nodes[i].netCnxs.n==cnd){
+                int nCnxs=0;
+                for(int j=0; j<cnd; ++j) if(nodes[nodes[i].netCnxs[j]].netCnxs.n==cnd) nCnxs+=1;
+                if(nCnxs>=minInnerCnxs){
+                    innerNodes[i]=1;
+                    outerNodes[i]=0;
+                }
+                else if(nCnxs>=minOuterCnxs){
+                    innerNodes[i]=0;
+                    outerNodes[i]=1;
+                }
+                else{
+                    innerNodes[i]=0;
+                    outerNodes[i]=0;
+                }
+            }
+            else{
+                innerNodes[i]=0;
+                outerNodes[i]=0;
+            }
+        }
+
+        //Find largest cluster
+        int maxClstSize=0;
+        for(int i=0; i<nodes.n; ++i){
+            if(innerNodes[i]==1){
+                VecR<int> clst(0,nodes.n);
+                VecR<int> search0(0,nodes.n),search1(0,nodes.n),search2(0,nodes.n);
+                clst.addValue(i);
+                search0.addValue(i);
+                for(;;) {
+                    for (int j = 0; j < search0.n; ++j) {
+                        for (int k = 0; k < cnd; ++k) {
+                            int id = nodes[search0[j]].netCnxs[k];
+                            if (innerNodes[id]) search1.addValue(id);
+                            else if (outerNodes[id]) search2.addValue(id);
+                        }
+                    }
+                    search1=vUnique(search1);
+                    VecR<int> delValues=vCommonValues(clst,search1);
+                    for(int j=0; j<delValues.n; ++j) search1.delValue(delValues[j]);
+                    delValues=vCommonValues(clst,search2);
+                    for(int j=0; j<delValues.n; ++j) search2.delValue(delValues[j]);
+                    for(int j=0; j<search1.n; ++j) clst.addValue(search1[j]);
+                    for(int j=0; j<search2.n; ++j) clst.addValue(search2[j]);
+                    search0=search1;
+                    search1=VecR<int>(0,nodes.n);
+                    search2=VecR<int>(0,nodes.n);
+                    if(search0.n==0) break;
+                }
+                for(int j=0; j<clst.n; ++j){
+                    innerNodes[clst[j]]=0;
+                    outerNodes[clst[j]]=0;
+                }
+                if(clst.n>maxClstSize) maxClstSize=clst.n;
+            }
+        }
+
+        //Add to results vector
+        maxClusters[cndIndex]=maxClstSize;
+    }
+
+    return maxClusters;
+}
+
+//Get cluster statistics for given node coordination
+double Network::maxCluster(int nodeCnd) {
+
+    //Identify nodes with the required coordination
     VecF<int> activeNodes(nodes.n);
     for(int i=0; i<nodes.n; ++i){
         if(nodes[i].netCnxs.n==nodeCnd) activeNodes[i]=1;

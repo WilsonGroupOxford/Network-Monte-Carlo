@@ -52,7 +52,8 @@ public:
     double assortativity(); //calculate network assortativity
     double aboavWeaireEstimate(); //estimate aw alpha parameter
     VecF<double> entropy(); //calculate entropy of node and edge distribution
-    double cluster(int nodeCnd); //get cluster statistics for given node coordination
+    VecF<int> maxClusters(int minCnd, int maxCnd, int minInnerCnxs, int minOuterCnxs); //get cluster statistics for node coordinations
+    double maxCluster(int nodeCnd); //get cluster statistics for given node coordination
     void write(string prefix);
     void writeXYZ(string prefix, string element);
 };

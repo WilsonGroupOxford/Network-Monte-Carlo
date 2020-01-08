@@ -216,10 +216,12 @@ int main(){
     OutputFile outEmatrix(prefixOut+"_ematrix.out");
     OutputFile outGeomHist(prefixOut+"_geomhist.out");
     OutputFile outAreas(prefixOut+"_areas.out");
-    OutputFile outCluster(prefixOut+"_cluster.out");
+    OutputFile outClusterA(prefixOut+"_cluster_a.out");
+    OutputFile outClusterB(prefixOut+"_cluster_b.out");
     outGeometry.initVariables(6,4,60,20);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
     outGeomHist.initVariables(6,4,60,20);
+    outClusterB.initVariables(1,4,60,10);
     logfile.write("Ring statistics file created");
     logfile.write("Correlations file created");
     logfile.write("Energy file created");
@@ -282,6 +284,7 @@ int main(){
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
                 network.getRingAreas(a,aSq);
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
@@ -292,12 +295,13 @@ int main(){
                 outAreas.writeRowVector(a);
                 outAreas.writeRowVector(aSq);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                outClusterB.writeRowVector(clusters);
                 if(mixedLattice) {
                     VecF<double> cluster(3);
-                    cluster[0] = network.getCluster("A", 3);
-                    cluster[1] = network.getCluster("A", 4);
+                    cluster[0] = network.getMaxCluster("A", 3);
+                    cluster[1] = network.getMaxCluster("A", 4);
                     cluster[2] = network.getAssortativity("A");
-                    outCluster.writeRowVector(cluster);
+                    outClusterA.writeRowVector(cluster);
                 }
             }
         }
@@ -344,6 +348,7 @@ int main(){
                     corr[4] = aw[2];
                     VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                     VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                    VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
                     network.getRingAreas(a,aSq);
                     outRingStats.writeRowVector(ringStats);
                     outCorr.writeRowVector(corr);
@@ -353,13 +358,14 @@ int main(){
                     outGeometry.writeRowVector(geomStats);
                     outAreas.writeRowVector(a);
                     outAreas.writeRowVector(aSq);
+                    outClusterB.writeRowVector(clusters);
                     for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
                     if(mixedLattice) {
                         VecF<double> cluster(3);
-                        cluster[0] = network.getCluster("A", 3);
-                        cluster[1] = network.getCluster("A", 4);
+                        cluster[0] = network.getMaxCluster("A", 3);
+                        cluster[1] = network.getMaxCluster("A", 4);
                         cluster[2] = network.getAssortativity("A");
-                        outCluster.writeRowVector(cluster);
+                        outClusterA.writeRowVector(cluster);
                     }
                 }
                 if (i%structureFreq==0 && writeStructures==1) {
@@ -432,6 +438,7 @@ int main(){
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
                 network.getRingAreas(a,aSq);
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
@@ -442,12 +449,13 @@ int main(){
                 outAreas.writeRowVector(a);
                 outAreas.writeRowVector(aSq);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                outClusterB.writeRowVector(clusters);
                 if(mixedLattice) {
                     VecF<double> cluster(3);
-                    cluster[0] = network.getCluster("A", 3);
-                    cluster[1] = network.getCluster("A", 4);
+                    cluster[0] = network.getMaxCluster("A", 3);
+                    cluster[1] = network.getMaxCluster("A", 4);
                     cluster[2] = network.getAssortativity("A");
-                    outCluster.writeRowVector(cluster);
+                    outClusterA.writeRowVector(cluster);
                 }
             }
         }
@@ -499,6 +507,7 @@ int main(){
                         corr[4] = aw[2];
                         VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                         VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
+                        VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
                         network.getRingAreas(a,aSq);
                         outRingStats.writeRowVector(ringStats);
                         outCorr.writeRowVector(corr);
@@ -509,12 +518,13 @@ int main(){
                         outAreas.writeRowVector(a);
                         outAreas.writeRowVector(aSq);
                         for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                        outClusterB.writeRowVector(clusters);
                         if(mixedLattice) {
                             VecF<double> cluster(3);
-                            cluster[0] = network.getCluster("A", 3);
-                            cluster[1] = network.getCluster("A", 4);
+                            cluster[0] = network.getMaxCluster("A", 3);
+                            cluster[1] = network.getMaxCluster("A", 4);
                             cluster[2] = network.getAssortativity("A");
-                            outCluster.writeRowVector(cluster);
+                            outClusterA.writeRowVector(cluster);
                         }
                     }
                     if (i%structureFreq==0 && writeStructures==0) {

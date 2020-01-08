@@ -4,3 +4,5 @@ test/*
 debug/*
 *.log
 .idea*
+video/*
+.DS_Store

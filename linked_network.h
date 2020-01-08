@@ -76,7 +76,8 @@ public:
     VecF<double> getEntropy(string lattice); //get node and edge distribution entropy
     VecF<double> getOptimisationGeometry(VecF<double> &lenHist, VecF<double> &angHist); //get bond/angle mean and standard deviation
     void getRingAreas(VecF<double> &areaSum, VecF<double> &areaSqSum); //get sum of areas and squared areas of each ring size
-    double getCluster(string lattice, int nodeCnd); //get cluster statistics for given node coordination
+    double getMaxCluster(string lattice, int nodeCnd); //get cluster statistics for given node coordination
+    VecF<int> getMaxClusters(string lattice, int minCnd, int maxCnd); //get cluster statistics for node coordinations
     bool checkConsistency(); //check networks are consistent
     bool checkCnxConsistency(); //check for mutual connections
     bool checkDescriptorConsistency(); //check descriptors are accurate

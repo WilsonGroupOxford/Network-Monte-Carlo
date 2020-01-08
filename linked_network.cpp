@@ -2057,10 +2057,17 @@ VecF<double> LinkedNetwork::getEntropy(string lattice) {
 }
 
 //Get cluster information
-double LinkedNetwork::getCluster(string lattice, int nodeCnd){
+double LinkedNetwork::getMaxCluster(string lattice, int nodeCnd){
 
-    if(lattice=="A") return networkA.cluster(nodeCnd);
-    else return networkB.cluster(nodeCnd);
+    if(lattice=="A") return networkA.maxCluster(nodeCnd);
+    else return networkB.maxCluster(nodeCnd);
+}
+
+//Get cluster information
+VecF<int> LinkedNetwork::getMaxClusters(string lattice, int minCnd, int maxCnd){
+
+    if(lattice=="A") return networkA.maxClusters(minCnd,maxCnd,3,2);
+    else return networkB.maxClusters(minCnd,maxCnd,3,2);
 }
 
 //Check linked networks for consistency

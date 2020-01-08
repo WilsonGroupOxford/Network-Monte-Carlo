@@ -136,6 +136,7 @@ bool vContains(T vec, S val){
 //Find unique values in vector
 template <typename T>
 T vUnique(T vecA){
+    if(vecA.n==0) return vecA;
     T vecB=vSort(vecA);
     int count=0;
     for(int i=1; i<vecB.n; ++i){
