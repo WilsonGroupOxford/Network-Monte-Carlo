@@ -31,12 +31,18 @@ int main(){
     int nRings,minRingSize,maxRingSize;
     string lattice;
     string crystal;
+    string moveType;
+    int minCnd,maxCnd;
     getline(inputFile,line);
     istringstream(line)>>nRings;
     getline(inputFile,line);
     istringstream(line)>>minRingSize;
     getline(inputFile,line);
     istringstream(line)>>maxRingSize;
+    getline(inputFile,line);
+    istringstream(line)>>minCnd;
+    getline(inputFile,line);
+    istringstream(line)>>maxCnd;
     getline(inputFile,line);
     istringstream(line)>>lattice;
     getline(inputFile,line);
@@ -49,6 +55,8 @@ int main(){
     int randomSeed;
     getline(inputFile,line);
     istringstream(line)>>runType;
+    getline(inputFile,line);
+    istringstream(line)>>moveType;
     getline(inputFile,line);
     istringstream(line)>>randomSeed;
     getline(inputFile,skip);
@@ -159,7 +167,10 @@ int main(){
     logfile.write("Number of rings:",nRings);
     logfile.write("Min ring size:",minRingSize);
     logfile.write("Max ring size:",maxRingSize);
+    logfile.write("Min node coordination:",minCnd);
+    logfile.write("Max node coordination:",maxCnd);
     logfile.write("Monte Carlo run type:",runType);
+    logfile.write("Monte Carlo move type:",moveType);
     if(runType=="energy") {
         logfile.write("Monte carlo initial log temperature:", mcStartT);
         logfile.write("Monte carlo final log temperature:", mcEndT);
@@ -176,8 +187,8 @@ int main(){
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
     bool mixedLattice=false; //whether mixed coordination lattice
-    if(lattice.substr(0,3)=="mix" || lattice.substr(0,5)=="cairo") mixedLattice=true;
-    LinkedNetwork network(nRings,lattice,4,maxRingSize,minRingSize);
+    if(lattice.substr(0,3)=="mix" || lattice.substr(0,5)=="cairo" || moveType=="mix") mixedLattice=true;
+    LinkedNetwork network(nRings,lattice,minCnd,maxCnd,minRingSize,maxRingSize);
     network.write("./output_files/pre");
     network.initialisePotentialModel(potAK,potBK,potCK,potConvex);
     network.initialiseGeometryOpt(goptLocalIt,goptTau,goptTol,goptLocalSize);
@@ -218,6 +229,7 @@ int main(){
     OutputFile outAreas(prefixOut+"_areas.out");
     OutputFile outClusterA(prefixOut+"_cluster_a.out");
     OutputFile outClusterB(prefixOut+"_cluster_b.out");
+    OutputFile outCndStats(prefixOut+"_cndstats.out");
     outGeometry.initVariables(6,4,60,20);
     outAreas.initVariables(6,4,60,30);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
@@ -231,6 +243,7 @@ int main(){
     logfile.write("Geometry file created");
     logfile.write("Geometry histogram file created");
     logfile.write("Edge distribution file created");
+    logfile.write("Coordination statistics file created");
     --logfile.currIndent;
     logfile.write("Files initialised");
     logfile.separator();
@@ -285,7 +298,8 @@ int main(){
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
-                VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
+//                VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
+                VecF<double> cndStats = network.getNodeDistribution("A");
                 network.getRingAreas(a,aSq);
                 outRingStats.writeRowVector(ringStats);
                 outCorr.writeRowVector(corr);
@@ -296,7 +310,8 @@ int main(){
                 outAreas.writeRowVector(a);
                 outAreas.writeRowVector(aSq);
                 for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
-                outClusterB.writeRowVector(clusters);
+//                outClusterB.writeRowVector(clusters);
+                outCndStats.writeRowVector(cndStats);
                 if(mixedLattice) {
                     VecF<double> cluster(3);
                     cluster[0] = network.getMaxCluster("A", 3);
@@ -349,7 +364,8 @@ int main(){
                     corr[4] = aw[2];
                     VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                     VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
-                    VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
+//                    VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
+                    VecF<double> cndStats = network.getNodeDistribution("A");
                     network.getRingAreas(a,aSq);
                     outRingStats.writeRowVector(ringStats);
                     outCorr.writeRowVector(corr);
@@ -359,8 +375,9 @@ int main(){
                     outGeometry.writeRowVector(geomStats);
                     outAreas.writeRowVector(a);
                     outAreas.writeRowVector(aSq);
-                    outClusterB.writeRowVector(clusters);
+//                    outClusterB.writeRowVector(clusters);
                     for(int j=0; j<edgeDist.n; ++j) outEmatrix.writeRowVector(edgeDist[j]);
+                    outCndStats.writeRowVector(cndStats);
                     if(mixedLattice) {
                         VecF<double> cluster(3);
                         cluster[0] = network.getMaxCluster("A", 3);

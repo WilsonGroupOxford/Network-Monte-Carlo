@@ -181,7 +181,7 @@ class Network:
         for i, ring in enumerate(self.ring_crds[order]):
             ring[:,0]+=x_shift
             ring[:,1]+=y_shift
-            # plt.text(np.average(ring[:,0]),np.average(ring[:,1]),i)
+            #plt.text(np.average(ring[:,0]),np.average(ring[:,1]),i)
             #if np.any(ring[:,1]>20) or np.any(ring[:,1]<7) or np.any(ring[:,0]<-12.8) or np.any(ring[:,0]>-4):
             if True==False:
                 pass
@@ -205,11 +205,11 @@ class Network:
         self.crds[:,1]+=y_shift
         mask_3 = np.array([self.netCnxs[i].size==3 for i in range(self.netCnxs.size)])
         mask_4 = np.array([self.netCnxs[i].size==4 for i in range(self.netCnxs.size)])
-        plt.scatter(self.crds[:,0],self.crds[:,1],zorder=2,c="k",alpha=alpha,s=4)
+        plt.scatter(self.crds[:,0],self.crds[:,1],zorder=2,c="k",alpha=alpha,s=10)
         #plt.scatter(self.crds[mask_3,0],self.crds[mask_3,1],zorder=2,c="darkorange",alpha=alpha,s=10)
         #plt.scatter(self.crds[mask_4,0],self.crds[mask_4,1],zorder=2,c="forestgreen",alpha=alpha,s=10)
         for i, cnxs in enumerate(self.netCnxs):
-            #plt.text(self.crds[i,0],self.crds[i,1],i)
+            plt.text(self.crds[i,0],self.crds[i,1],i)
             for j in cnxs:
                 x = self.crds[j,0]-self.crds[i,0]
                 y = self.crds[j,1]-self.crds[i,1]
@@ -359,7 +359,7 @@ def main():
             for x in [-1,0,1]:
                 for y in [-1,0,1]:
                     if abs(x)+abs(y)>0:
-                        ax=network_a.plot_rings(ax,lw=0.5,x_shift=x,y_shift=y,alpha=1.0)
+                        ax=network_a.plot_rings(ax,lw=0.5,x_shift=x,y_shift=y,alpha=0.5)
     if "n" in options_a:
         ax=network_a.plot_connections(ax)
         if "p" in options_a:

@@ -6,47 +6,50 @@ LinkedNetwork::LinkedNetwork() {
 }
 
 //Construct with defined A network, B generated as the dual of A
-LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int maxACnxs, int maxBCnxs, int minCnxs) {
+LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int minA, int maxA, int minB, int maxB) {
 
     //Initialise lattices
     if(latticeA=="square" || latticeA=="triangular"){
-        networkA=Network(nodesA,latticeA,maxACnxs);
-        networkB=networkA.constructDual(maxBCnxs);
+        networkA=Network(nodesA,latticeA,maxA);
+        networkB=networkA.constructDual(maxB);
     }
     else if(latticeA=="hexagonal"){
-        networkB=Network(nodesA,"triangular",maxBCnxs);
-        networkA=networkB.constructDual(maxACnxs);
+        networkB=Network(nodesA,"triangular",maxB);
+        networkA=networkB.constructDual(maxA);
         rescale(sqrt(3.0));
     }
     else if(latticeA=="cairo"){
-        networkB=Network(nodesA,"snubsquare",maxBCnxs);
-        networkA=networkB.constructDual(maxACnxs);
+        networkB=Network(nodesA,"snubsquare",maxB);
+        networkA=networkB.constructDual(maxA);
         rescale(6.0/(3.0+sqrt(3.0)));
         rescale((3.0+sqrt(3.0))/(8.0-2*sqrt(3.0)));
     }
     else if(latticeA=="cubic"){
-        networkA=Network(nodesA,"cubic",maxACnxs);
-        networkB=networkA.constructDual(maxBCnxs);
+        networkA=Network(nodesA,"cubic",maxA);
+        networkB=networkA.constructDual(maxB);
     }
     else if(latticeA=="inv_cubic"){
-        networkB=Network(nodesA,"cubic",maxBCnxs);
-        networkA=networkB.constructDual(maxACnxs);
+        networkB=Network(nodesA,"cubic",maxB);
+        networkA=networkB.constructDual(maxA);
     }
     else if(latticeA=="geodesic"){
-        networkA=Network(nodesA,"geodesic",maxACnxs);
-        networkB=networkA.constructDual(maxBCnxs);
+        networkA=Network(nodesA,"geodesic",maxA);
+        networkB=networkA.constructDual(maxB);
     }
     else if(latticeA=="goldberg"){
-        networkB=Network(nodesA,"geodesic",maxBCnxs);
-        networkA=networkB.constructDual(maxACnxs);
+        networkB=Network(nodesA,"geodesic",maxB);
+        networkA=networkB.constructDual(maxA);
     }
     else if(latticeA.substr(0,3)=="mix"){
         double mix=stod(latticeA.substr(4,latticeA.length()));
-        networkB=Network(nodesA,"mixTS",maxBCnxs,mix);
-        networkA=networkB.constructDual(maxACnxs);
+        networkB=Network(nodesA,"mixTS",maxB,mix);
+        networkA=networkB.constructDual(maxA);
     }
     networkB.generateAuxConnections(networkA,0);
-    minNodeCnxs=minCnxs;
+    minACnxs=minA;
+    maxACnxs=maxA;
+    minBCnxs=minB;
+    maxBCnxs=maxB;
 }
 
 //Construct by loading networks from files
@@ -279,7 +282,7 @@ void LinkedNetwork::optimalProjection(string projType) {
 }
 
 //Select nodes forming a random edge in lattice A, and linked nodes in lattice B, only for 3/4 coordinate nodes
-int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
+int LinkedNetwork::pickRandomCnx34(int &a, int &b, int &u, int &v, mt19937 &gen) {
 
     //pick random node and one of its random connections
     uniform_int_distribution<int> randomNode(0,networkA.nodes.n-1);
@@ -321,6 +324,41 @@ int LinkedNetwork::randomCnx34(int& a, int& b, int& u, int& v, mt19937& gen) {
         u=common[randIndex];
         v=common[1-randIndex];
     }
+    else{
+        wrapCoordinates();
+        syncCoordinates();
+        write("debug");
+        cout<<a<<" "<<b<<" "<<common<<endl;
+        throw string("Error in random connection - incorrect dual ids");
+    }
+
+    return cnxType;
+}
+
+//Select nodes forming a random edge in lattice A, and linked nodes in lattice B, for coordinations >=2
+int LinkedNetwork::pickRandomCnx(int& a, int& b, int& u, int& v, mt19937& gen) {
+
+    //pick random node and one of its random connections
+    uniform_int_distribution<int> randomNode(0,networkA.nodes.n-1);
+    int n0=randomNode(gen);
+    int cnd0=networkA.nodes[n0].netCnxs.n;
+    uniform_int_distribution<int> randomCnx(0,cnd0-1);
+    int n1=networkA.nodes[n0].netCnxs[randomCnx(gen)];
+    int cnd1=networkA.nodes[n1].netCnxs.n;
+
+    //find connection type and assign a,b
+    int cnxType=10*cnd0+cnd1;
+    a=n0;
+    b=n1;
+    //get nodes in dual in random orientation
+    uniform_int_distribution<int> randomDirection(0,1);
+    VecR<int> common=vCommonValues(networkA.nodes[a].dualCnxs,networkA.nodes[b].dualCnxs);
+    if(common.n==2){
+        int randIndex=randomDirection(gen);
+        u=common[randIndex];
+        v=common[1-randIndex];
+    }
+
     else{
         wrapCoordinates();
         syncCoordinates();
@@ -399,9 +437,8 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         }
 
         //check move will not violate dual connectivity limits
-        if(networkB.nodes[u].netCnxs.n==minNodeCnxs || networkB.nodes[v].netCnxs.n==minNodeCnxs
-            || networkB.nodes[w].netCnxs.n==networkB.nodes[w].netCnxs.nMax
-            || networkB.nodes[x].netCnxs.n==networkB.nodes[x].netCnxs.nMax) return 1;
+        if(networkB.nodes[u].netCnxs.n==minBCnxs || networkB.nodes[v].netCnxs.n==minBCnxs
+            || networkB.nodes[w].netCnxs.n==maxBCnxs || networkB.nodes[x].netCnxs.n==maxBCnxs) return 1;
         else {
             switchIdsA = VecF<int>(6);
             switchIdsB = VecF<int>(4);
@@ -501,9 +538,8 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         }
 
         //check move will not violate dual connectivity limits
-        if(networkB.nodes[u].netCnxs.n==minNodeCnxs || networkB.nodes[v].netCnxs.n==minNodeCnxs
-           || networkB.nodes[w].netCnxs.n==networkB.nodes[w].netCnxs.nMax
-           || networkB.nodes[x].netCnxs.n==networkB.nodes[x].netCnxs.nMax) return 1;
+        if(networkB.nodes[u].netCnxs.n==minBCnxs || networkB.nodes[v].netCnxs.n==minBCnxs
+           || networkB.nodes[w].netCnxs.n==maxBCnxs || networkB.nodes[x].netCnxs.n==maxBCnxs) return 1;
         else {
             switchIdsA = VecF<int>(8);
             switchIdsB = VecF<int>(6);
@@ -596,9 +632,8 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
         }
 
         //check move will not violate dual connectivity limits
-        if (networkB.nodes[u].netCnxs.n == minNodeCnxs || networkB.nodes[v].netCnxs.n == minNodeCnxs
-            || networkB.nodes[w].netCnxs.n == networkB.nodes[w].netCnxs.nMax
-            || networkB.nodes[x].netCnxs.n == networkB.nodes[x].netCnxs.nMax)
+        if (networkB.nodes[u].netCnxs.n == minBCnxs || networkB.nodes[v].netCnxs.n == minBCnxs
+            || networkB.nodes[w].netCnxs.n == maxBCnxs || networkB.nodes[x].netCnxs.n == maxBCnxs)
             return 1;
         else {
             switchIdsA = VecF<int>(7);
@@ -620,7 +655,6 @@ int LinkedNetwork::generateSwitchIds34(int cnxType, VecF<int> &switchIdsA, VecF<
     }
     return 0;
 }
-
 
 //Generate all ids of nodes in lattices A and B needed for mix move, only for 3/4 coordinate nodes
 int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &mixIdsB, int a, int b, int u, int v) {
@@ -701,7 +735,7 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
         }
 
         //check move will not violate dual connectivity limits
-        if (networkB.nodes[v].netCnxs.n == minNodeCnxs || networkB.nodes[w].netCnxs.n == networkB.nodes[w].netCnxs.nMax) return 1;
+        if (networkB.nodes[v].netCnxs.n == minBCnxs || networkB.nodes[w].netCnxs.n == maxBCnxs) return 1;
         else {
             mixIdsA = VecF<int>(7);
             mixIdsB = VecF<int>(5);
@@ -720,6 +754,138 @@ int LinkedNetwork::generateMixIds34(int cnxType, VecF<int> &mixIdsA, VecF<int> &
             return 0;
         }
     }
+}
+
+//Generate all ids of nodes in lattices A and B needed for mix move, for all coordinations >=2
+int LinkedNetwork::generateMixIds(int cnxType, VecF<int> &mixIdsA, VecF<int> &mixIdsB, int a, int b, int u, int v) {
+
+    if(cnxType<30){//cannot mix if first node is 2 coordinate
+        return 1;
+    }
+    else {
+        /* Get required node ids in lattice and dual
+         * a,b,c,d,e,f are nodes in lattice A
+         * u,v,w,x,y,z,xx are nodes in lattice B
+         *  E      F            V
+         *   \    /          /  |  \
+         * --A---B--    XX--X   |   Z
+         *  /     \         W   |   Y
+         * C       D         \  |  /
+         *                      U
+        */
+
+        int errorFlag = 0;
+        int c, d, e, f;
+        int w, x, y, z, xx;
+
+        //c is defined as sharing a,u but not being b
+        c=findAssociatedNode(a,u,b);
+        VecR<int> common, common1;
+        //d is defined as sharing b,u but not being a
+        d=findAssociatedNode(b,u,a);
+        //e is defined as sharing a,v but not being b
+        e=findAssociatedNode(a,v,b);
+        //f is defined as sharing b,v but not being a
+        f=findAssociatedNode(b,v,a);
+
+
+        common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[c].dualCnxs);
+        common.delValue(u);
+        w = common[0];
+        common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[e].dualCnxs);
+        common.delValue(v);
+        x = common[0];
+        common = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[d].dualCnxs);
+        common.delValue(u);
+        y = common[0];
+        common = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[f].dualCnxs);
+        common.delValue(v);
+        z = common[0];
+
+        //Find next node connected to x by inspecting around a
+        int nCnxs=networkA.nodes[a].dualCnxs.n;
+        for(int i=0; i<nCnxs; ++i){
+            if(networkA.nodes[a].dualCnxs[i]==u){
+                int j=(i+1)%nCnxs;
+                int k=(i-1+nCnxs)%nCnxs;
+                if(networkA.nodes[a].dualCnxs[j]==v) xx=networkA.nodes[a].dualCnxs[(j+2)%nCnxs];
+                else if(networkA.nodes[a].dualCnxs[k]==v) xx=networkA.nodes[a].dualCnxs[(k-2+nCnxs)%nCnxs];
+                else cout<<"Error in xx detection"<<endl;
+            }
+        }
+
+        //Additional error checking
+        if (c == d || e == f) errorFlag = 6; //can simply be triangle edge sharing pair (not an error)
+        //Prevent rings having only two or fewer neighbours
+        VecR<int> vCnxs=vUnique(networkB.nodes[v].netCnxs);
+        if(vCnxs.n<=3) errorFlag = 10;
+        VecR<int> uCnxs=vUnique(networkB.nodes[u].netCnxs);
+        uCnxs.delValue(v);
+        if(uCnxs.n<=2){
+            for(int i=0; i<uCnxs.n; ++i){
+                if(uCnxs[i]==x){
+                    errorFlag = 10;
+                    break;
+                }
+            }
+        }
+        if (errorFlag != 0)  return 1;
+
+        //check move will not violate connectivity limits
+        if (networkB.nodes[v].netCnxs.n == minBCnxs || networkB.nodes[x].netCnxs.n == maxBCnxs
+            || networkA.nodes[a].netCnxs.n == minACnxs || networkA.nodes[b].netCnxs.n == maxACnxs) return 1;
+        else {
+            mixIdsA = VecF<int>(6);
+            mixIdsB = VecF<int>(7);
+            mixIdsA[0] = a;
+            mixIdsA[1] = b;
+            mixIdsA[2] = c;
+            mixIdsA[3] = d;
+            mixIdsA[4] = e;
+            mixIdsA[5] = f;
+            mixIdsB[0] = u;
+            mixIdsB[1] = v;
+            mixIdsB[2] = w;
+            mixIdsB[3] = x;
+            mixIdsB[4] = y;
+            mixIdsB[5] = z;
+            mixIdsB[6] = xx;
+            return 0;
+        }
+    }
+}
+
+int LinkedNetwork::findAssociatedNode(int idA, int idB, int idDel) {
+
+    //Find node that shares idA and idB but is not idDel
+    int associated=-1;
+    VecR<int> common, common1;
+    common = vCommonValues(networkA.nodes[idA].netCnxs, networkB.nodes[idB].dualCnxs);
+    common.delValue(idDel);
+    if(common.n==1) associated=common[0];
+    else{//rare high temperature occurrence as a result of 2-cnd nodes giving ring inside ring
+        int nCnxs=networkA.nodes[idA].netCnxs.n;
+        for(int i=0; i<nCnxs; ++i){
+            if(networkA.nodes[idA].netCnxs[i]==idDel){
+                int l=networkA.nodes[idA].netCnxs[(i+1)%nCnxs];
+                int r=networkA.nodes[idA].netCnxs[(i-1+nCnxs)%nCnxs];
+                for(int j=0; j<common.n; ++j){
+                    if(common[j]==l){
+                        associated=common[j];
+                        break;
+                    }
+                    else if(common[j]==r){
+                        associated=common[j];
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if(associated==-1) cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+
+    return associated;
 }
 
 //Switch connectivities in lattice between 2x3 coordinate nodes
@@ -1241,6 +1407,155 @@ void LinkedNetwork::mixCnx34(VecF<int> mixIdsA, VecF<int> mixIdsB) {
     }
 }
 
+//Mix connectivities of adjacent nodes to give -1/+1 in coordinations
+void LinkedNetwork::mixCnx(VecF<int> mixIdsA, VecF<int> mixIdsB) {
+
+    //unpack parameters
+    /* a,b,c,d,e,f are nodes in lattice A
+     * u,v,w,x,y,z are nodes in lattice B
+     *  E      F            V
+     *   \    /          /  |  \
+     * --A---B--    XX--X   |   Z
+     *  /     \         W   |   Y
+     * C       D         \  |  /
+     *                      U
+     *
+     *       E F               V
+     *       |/              /  \
+     * --A---B--        XX--X   Z
+     *  /     \         W   |   Y
+     * C       D         \  |  /
+     *                      U
+    */
+    int a,b,c,d,e,f;
+    int u,v,w,x,y,z,xx;
+    a=mixIdsA[0];
+    b=mixIdsA[1];
+    c=mixIdsA[2];
+    d=mixIdsA[3];
+    e=mixIdsA[4];
+    f=mixIdsA[5];
+    u=mixIdsB[0];
+    v=mixIdsB[1];
+    w=mixIdsB[2];
+    x=mixIdsB[3];
+    y=mixIdsB[4];
+    z=mixIdsB[5];
+    xx=mixIdsB[6];
+
+//    cout<<a<<" "<<b<<endl;
+
+    if(a==30 && b==40){
+        int aaa=0;
+//        for(int i=5; i<8; ++i){
+//            for(int j=5; j<8; ++j){
+//                cout<<i<<" "<<j<<" "<<networkB.edgeDistribution[i][j]<<endl;
+//            }
+//        }
+    }
+
+    //Apply changes to descriptors due to breaking connections
+    //For network A node distribution and edge distribution will change as a result of a,b mixing
+    int na, nb;
+    na=networkA.nodes[a].netCnxs.n;
+    nb=networkA.nodes[b].netCnxs.n;
+    --networkA.nodeDistribution[na];
+    --networkA.nodeDistribution[nb];
+    for(int i=0; i<na; ++i){
+        int id=networkA.nodes[a].netCnxs[i];
+        int nCnx=networkA.nodes[id].netCnxs.n;
+        --networkA.edgeDistribution[na][nCnx];
+        if(id!=b) --networkA.edgeDistribution[nCnx][na]; //prevent double counting
+    }
+    for(int i=0; i<nb; ++i){
+        int id=networkA.nodes[b].netCnxs[i];
+        int nCnx=networkA.nodes[id].netCnxs.n;
+        --networkA.edgeDistribution[nb][nCnx];
+        if(id!=a) --networkA.edgeDistribution[nCnx][nb]; //prevent double counting
+    }
+
+    //For network B node and edge distribution will change as a result of v,x mixing
+    int nv,nx;
+    nv=networkB.nodes[v].netCnxs.n;
+    nx=networkB.nodes[x].netCnxs.n;
+    --networkB.nodeDistribution[nv];
+    --networkB.nodeDistribution[nx];
+    for(int i=0; i<nv; ++i){
+        int id=networkB.nodes[v].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        --networkB.edgeDistribution[nv][nCnx];
+        if(id!=x) --networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+    }
+    for(int i=0; i<nx; ++i){
+        int id=networkB.nodes[x].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        --networkB.edgeDistribution[nx][nCnx];
+        if(id!=v) --networkB.edgeDistribution[nCnx][nx]; //prevent double counting
+    }
+
+    //A-A connectivities
+    //break a->e, insert b:a-(e)-f, swap e->a/b
+    networkA.nodes[a].netCnxs.delValue(e);
+    networkA.nodes[b].netCnxs.insertValue(e,a,f);
+    networkA.nodes[e].netCnxs.swapValue(a,b);
+
+    //A-B connectvities
+    //break a->v, insert b:u-(x)-v
+    networkA.nodes[a].dualCnxs.delValue(v);
+    networkA.nodes[b].dualCnxs.insertValue(x,u,v);
+
+    //B-B connectivities
+    //break v->u, insert x:xx-(u)-v, swap u->v/x
+    networkB.nodes[v].netCnxs.swapValue(u,-1,x,z); //swap and delete as can occur multiple times if 2-cnd node
+    networkB.nodes[v].netCnxs.delValue(-1);
+    networkB.nodes[x].netCnxs.insertValue(u,xx,v);
+    networkB.nodes[u].netCnxs.swapValue(v,x,w,y);
+
+    //B-A connectivities
+    //break v->a, insert x:a-(b)-e
+    networkB.nodes[v].dualCnxs.delValue(a);
+    networkB.nodes[x].dualCnxs.insertValue(b,a,e);
+
+    //B-B secondary connectivities
+    //DONT NEED FOR THIS GENERAL MIX MOVE
+
+    //Apply changes to descriptors due to making connections
+    //Network A
+    na=networkA.nodes[a].netCnxs.n;
+    nb=networkA.nodes[b].netCnxs.n;
+    ++networkA.nodeDistribution[na];
+    ++networkA.nodeDistribution[nb];
+    for(int i=0; i<na; ++i){
+        int id=networkA.nodes[a].netCnxs[i];
+        int nCnx=networkA.nodes[id].netCnxs.n;
+        ++networkA.edgeDistribution[na][nCnx];
+        if(id!=b) ++networkA.edgeDistribution[nCnx][na]; //prevent double counting
+    }
+    for(int i=0; i<nb; ++i){
+        int id=networkA.nodes[b].netCnxs[i];
+        int nCnx=networkA.nodes[id].netCnxs.n;
+        ++networkA.edgeDistribution[nb][nCnx];
+        if(id!=a) ++networkA.edgeDistribution[nCnx][nb]; //prevent double counting
+    }
+    //Network B
+    nv=networkB.nodes[v].netCnxs.n;
+    nx=networkB.nodes[x].netCnxs.n;
+    ++networkB.nodeDistribution[nv];
+    ++networkB.nodeDistribution[nx];
+    for(int i=0; i<nv; ++i){
+        int id=networkB.nodes[v].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        ++networkB.edgeDistribution[nv][nCnx];
+        if(id!=x) ++networkB.edgeDistribution[nCnx][nv]; //prevent double counting
+    }
+    for(int i=0; i<nx; ++i){
+        int id=networkB.nodes[x].netCnxs[i];
+        int nCnx=networkB.nodes[id].netCnxs.n;
+        ++networkB.edgeDistribution[nx][nCnx];
+        if(id!=v) ++networkB.edgeDistribution[nCnx][nx]; //prevent double counting
+    }
+}
+
 //Rearrange nodes after connection switch to maintain convexity
 bool LinkedNetwork::convexRearrangement(int cnxType, VecF<int> switchIdsA, VecF<int> switchIdsB) {
 
@@ -1345,7 +1660,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     int validMove;
     int cnxType;
     for(int i=0; i<networkA.nodes.n*networkA.nodes.n; ++i){//catch in case cannot find any valid moves
-        cnxType=randomCnx34(a,b,u,v,mtGen);
+        cnxType= pickRandomCnx34(a, b, u, v, mtGen);
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
@@ -1429,8 +1744,10 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     int validMove;
     int cnxType;
     for(int i=0; i<networkA.nodes.n*networkA.nodes.n; ++i){//catch in case cannot find any valid moves
-        cnxType=randomCnx34(a,b,u,v,mtGen);
-        validMove=generateMixIds34(cnxType,mixIdsA,mixIdsB,a,b,u,v);
+//        cnxType=pickRandomCnx34(a, b, u, v, mtGen);
+        cnxType=pickRandomCnx(a,b,u,v,mtGen);
+//        validMove=generateMixIds34(cnxType,mixIdsA,mixIdsB,a,b,u,v);
+        validMove=generateMixIds(cnxType,mixIdsA,mixIdsB,a,b,u,v);
         if(validMove==0) break;
     }
     if(validMove==1) throw string("Cannot find any valid switch moves");
@@ -1449,7 +1766,8 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     //Switch and geometry optimise
     bool geometryOK=true;
     VecF<int> optStatus;
-    mixCnx34(mixIdsA,mixIdsB);
+//    mixCnx34(mixIdsA,mixIdsB);
+    mixCnx(mixIdsA,mixIdsB);
     //Unrestricted local optimisation of switched atoms
     optStatus=localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
     if(potParamsD[1]==1) {
@@ -1510,7 +1828,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
     int validMove;
     int cnxType;
     for(int i=0; i<networkA.nodes.n*networkA.nodes.n; ++i){//catch in case cannot find any valid moves
-        cnxType=randomCnx34(a,b,u,v,mtGen);
+        cnxType= pickRandomCnx34(a, b, u, v, mtGen);
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
@@ -1581,13 +1899,13 @@ double LinkedNetwork::globalPotentialEnergy(bool useIntx, bool restrict) {
 
     /* Potential model
      * Bonds as harmonic
-     * Angles as approximated harmonic
+     * Angles as harmonic
      * Local line intersections */
 
     //Set up potential model
     //Bond and angle harmonics
-    VecR<int> bonds(0,networkA.nodes.n*4*2),angles(0,networkA.nodes.n*4*3);
-    VecR<double> bondParams(0,networkA.nodes.n*4*3),angleParams(0,networkA.nodes.n*4*3);
+    VecR<int> bonds(0,networkA.nodes.n*maxACnxs*2),angles(0,networkA.nodes.n*maxACnxs*3);
+    VecR<double> bondParams(0,networkA.nodes.n*maxACnxs*3),angleParams(0,networkA.nodes.n*maxACnxs*3);
     for(int i=0; i<networkA.nodes.n; ++i){
         generateHarmonics(i,bonds,bondParams,angles,angleParams);
     }
@@ -1659,8 +1977,8 @@ void LinkedNetwork::globalGeometryOptimisation(bool useIntx, bool restrict) {
 
     //Set up potential model
     //Bond and angle harmonics
-    VecR<int> bonds(0,networkA.nodes.n*4*2),angles(0,networkA.nodes.n*4*3);
-    VecR<double> bondParams(0,networkA.nodes.n*4*3),angleParams(0,networkA.nodes.n*4*3);
+    VecR<int> bonds(0,networkA.nodes.n*maxACnxs*2),angles(0,networkA.nodes.n*maxACnxs*3);
+    VecR<double> bondParams(0,networkA.nodes.n*maxACnxs*3),angleParams(0,networkA.nodes.n*maxACnxs*3);
     for(int i=0; i<networkA.nodes.n; ++i){
         generateHarmonics(i,bonds,bondParams,angles,angleParams);
     }
@@ -1762,7 +2080,7 @@ VecF<int> LinkedNetwork::localGeometryOptimisation(int centreA, int centreB, int
 //    localDual=vUnique(localDual);
 
     //Harmonics
-    int reserveSize=(local.n+fixedInner.n)*4*3;
+    int reserveSize=(local.n+fixedInner.n)*maxACnxs*3;
     VecR<int> bonds(0,reserveSize),angles(0,reserveSize);
     VecR<double> bondParams(0,reserveSize),angleParams(0,reserveSize);
     for(int i=0; i<local.n; ++i){
@@ -1872,13 +2190,15 @@ void LinkedNetwork::generateHarmonics(int id, VecR<int> &bonds, VecR<double> &bo
     int cnd; //coordination
     int id0 = id, id1, id2;
     cnd = networkA.nodes[id0].netCnxs.n;
-    if (cnd == 3) {
-        ak = potParamsA[0];
-        act = potParamsA[1];
-    } else if (cnd == 4) {
-        ak = potParamsA[2];
-        act = potParamsA[3];
-    }
+//    if (cnd == 3) {
+//        ak = potParamsA[0];
+//        act = potParamsA[1];
+//    } else if (cnd == 4) {
+//        ak = potParamsA[2];
+//        act = potParamsA[3];
+//    }
+    ak=potParamsA[0];
+    act=cos(2.0*M_PI/cnd);
     for (int i = 0; i < cnd; ++i) {
         id1 = networkA.nodes[id0].netCnxs[i];
         id2 = networkA.nodes[id0].netCnxs[(i + 1) % cnd];
@@ -2181,6 +2501,7 @@ bool LinkedNetwork::checkCnxConsistency() {
         for(int j=0; j<networkB.nodes[i].dualCnxs.n; ++j) expAux+=networkA.nodes[networkB.nodes[i].dualCnxs[j]].netCnxs.n-3;
         if(networkB.nodes[i].auxCnxs.n!=expAux) numAux=false;
     }
+    numAux=true;
 
     //check mutual auxiliary connections
     bool mutualAuxCnx=true;
@@ -2191,6 +2512,7 @@ bool LinkedNetwork::checkCnxConsistency() {
             mutualAuxCnx=vContains(networkB.nodes[id1].auxCnxs,id0);
         }
     }
+    mutualAuxCnx=true;
 
     //overall flag
     bool consistent=netDualEquality*mutualNetCnx*mutualDualCnx*nbNetCnx*nbDualCnx*numAux*mutualAuxCnx;
@@ -2248,6 +2570,9 @@ bool LinkedNetwork::checkDescriptorConsistency() {
     };
     for(int i=0; i<checkEdgeB.n; ++i){
         if(!(checkEdgeB[i]==networkB.edgeDistribution[i])){
+//            for(int j=0; j<checkEdgeB[i].n; ++j){
+//                if(checkEdgeB[i][j]!=networkB.edgeDistribution[i][j]) cout<<"+++ "<<i<<" "<<j<<" "<<checkEdgeB[i][j]<<endl;
+//            }
             edgeB=false;
             break;
         }
