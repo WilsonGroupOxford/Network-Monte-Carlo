@@ -203,8 +203,8 @@ class Network:
         y_cut=0.5*self.pb[1]
         self.crds[:,0]+=x_shift
         self.crds[:,1]+=y_shift
-        mask_3 = np.array([self.netCnxs[i].size==3 for i in range(self.netCnxs.size)])
-        mask_4 = np.array([self.netCnxs[i].size==4 for i in range(self.netCnxs.size)])
+        #mask_3 = np.array([self.netCnxs[i].size==3 for i in range(self.netCnxs.size)])
+        #mask_4 = np.array([self.netCnxs[i].size==4 for i in range(self.netCnxs.size)])
         plt.scatter(self.crds[:,0],self.crds[:,1],zorder=2,c="k",alpha=alpha,s=10)
         #plt.scatter(self.crds[mask_3,0],self.crds[mask_3,1],zorder=2,c="darkorange",alpha=alpha,s=10)
         #plt.scatter(self.crds[mask_4,0],self.crds[mask_4,1],zorder=2,c="forestgreen",alpha=alpha,s=10)

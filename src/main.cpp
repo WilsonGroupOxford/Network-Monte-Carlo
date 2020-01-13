@@ -187,7 +187,7 @@ int main(){
         logfile.write("Monte carlo steps per increment:", costSteps);
     }
     bool mixedLattice=false; //whether mixed coordination lattice
-    if(lattice.substr(0,3)=="mix" || lattice.substr(0,5)=="cairo" || moveType=="mix") mixedLattice=true;
+    if(lattice.substr(0,3)=="mix" || lattice.substr(0,5)=="cairo" || lattice=="alt_square" || moveType=="mix") mixedLattice=true;
     LinkedNetwork network(nRings,lattice,minCnd,maxCnd,minRingSize,maxRingSize);
     network.write("./output_files/pre");
     network.initialisePotentialModel(potAK,potBK,potCK,potConvex);
@@ -288,13 +288,15 @@ int main(){
                 double aEst = network.getAboavWeaireEstimate("B");
                 VecF<double> aw = network.getAboavWeaire("B");
                 VecF<double> s = network.getEntropy("B");
-                VecF<double> corr(5);
+                VecF<double> corr(6);
                 VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
+                double rr = network.getAssortativity("A");
                 corr[0] = r;
                 corr[1] = aEst;
                 corr[2] = aw[0];
                 corr[3] = aw[1];
                 corr[4] = aw[2];
+                corr[5] = rr;
                 VecF<double> emptyL,emptyA; //dummy histograms
                 VecF<double> geomStats = network.getOptimisationGeometry(emptyL,emptyA);
                 VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
@@ -355,13 +357,15 @@ int main(){
                     double aEst = network.getAboavWeaireEstimate("B");
                     VecF<double> aw = network.getAboavWeaire("B");
                     VecF<double> s = network.getEntropy("B");
-                    VecF<double> corr(5);
+                    VecF<double> corr(6);
                     VecF<double> a(maxRingSize+1),aSq(maxRingSize+1);
+                    double rr = network.getAssortativity("A");
                     corr[0] = r;
                     corr[1] = aEst;
                     corr[2] = aw[0];
                     corr[3] = aw[1];
                     corr[4] = aw[2];
+                    corr[5] = rr;
                     VecF<double> geomStats = network.getOptimisationGeometry(lenHist,angHist);
                     VecF< VecF<int> > edgeDist = network.getEdgeDistribution("B");
 //                    VecF<int> clusters = network.getMaxClusters("B",minRingSize,maxRingSize);
@@ -386,6 +390,7 @@ int main(){
                         outClusterA.writeRowVector(cluster);
                     }
                 }
+                cout<<i<<" "<<network.checkConsistency()<<endl;
                 if (i%structureFreq==0 && writeStructures==1) {
                     network.syncCoordinates();
                     network.write(prefixOut+"_t"+to_string(t)+"_"+to_string(i));

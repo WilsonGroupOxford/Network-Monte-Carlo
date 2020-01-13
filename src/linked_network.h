@@ -53,7 +53,8 @@ public:
     int generateSwitchIds34(int cnxType, VecF<int>& switchIdsA, VecF<int>& switchIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for switch move
     int generateMixIds34(int cnxType, VecF<int>& mixIdsA, VecF<int>& mixIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for mix move
     int generateMixIds(int cnxType, VecF<int>& mixIdsA, VecF<int>& mixIdsB, int a, int b, int u, int v); //get all ids of nodes in lattice A and B needed for mix move
-    int findAssociatedNode(int idA, int idB, int idDel); //
+    int findAssociatedNodeAB(int idA, int idB, int idDel); //
+    int findAssociatedNodeAA(int idA, int idB, int idDel); //
     void switchCnx33(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x3 coordinate nodes
     void switchCnx44(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 2x4 coordinate nodes
     void switchCnx43(VecF<int> switchIdsA, VecF<int> switchIdsB); //switch connectivities in lattice between 4 and 3 coordinate nodes

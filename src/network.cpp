@@ -19,6 +19,7 @@ Network::Network(int nNodes, string lattice, int maxCnxs, double mixProportion) 
     if(lattice=="square") initialiseSquareLattice(sqrt(nNodes),maxCnxs);
     else if(lattice=="triangular") initialiseTriangularLattice(sqrt(nNodes),maxCnxs);
     else if(lattice=="snubsquare") initialiseSnubSquareLattice(sqrt(nNodes/8),maxCnxs);
+    else if(lattice=="altsquare") initialiseAltSquareLattice(sqrt(nNodes/3),maxCnxs);
     else if(lattice=="mixTS") initialiseMixedTSLattice(sqrt(nNodes),maxCnxs,mixProportion);
     else if(lattice=="cubic") initialiseCubicLattice(nNodes,maxCnxs);
     else if(lattice=="geodesic") initialiseGeodesicLattice(nNodes,maxCnxs);
@@ -450,6 +451,117 @@ void Network::initialiseSnubSquareLattice(int dim, int& maxCnxs) {
         }
     }
 
+}
+
+//Initialise square lattice of periodic 4-coordinate nodes seperated by 2-coordinate nodes
+void Network::initialiseAltSquareLattice(int dim, int& maxCnxs) {
+    geometryCode="2DE"; //2D euclidean
+    int xDim1=dim,xDim2=dim*2,yDim=2*dim;
+    int dimSq=dim*dim;
+    int dimSq3=3*dim*dim;
+    nodes=VecR<Node>(0,dimSq3);
+
+    //make 4 coordinate nodes
+    if(maxCnxs<4) maxCnxs=4; //need at least 4 connections
+    for(int i=0; i<nodes.nMax; ++i){
+        Node node(i,maxCnxs,maxCnxs,0);
+        nodes.addValue(node);
+    }
+
+    //assign coordinates in layers, with unit bond lengths
+    pb=VecF<double>(2);
+    rpb=VecF<double>(2);
+    pb=xDim2;
+    rpb=1.0/xDim2;
+    VecF<double> c(2);
+    int id=0;
+    for(int y=0; y<yDim; ++y){
+        c[1]=0.5+y;
+        if(y%2==0){
+            for(int x=0; x<xDim2; ++x){
+                c[0]=0.5+x;
+                nodes[id].crd=c;
+                ++id;
+            }
+        }
+        else{
+            for(int x=0; x<xDim1; ++x){
+                c[0]=0.5+2*x;
+                nodes[id].crd=c;
+                ++id;
+            }
+        }
+    }
+
+    //make connections to nodes in clockwise order
+    int cnx,level;
+    id=0;
+    for(int y=0; y<yDim; ++y){
+        if(y%2==0){
+            level=y*(xDim2+xDim1)/2;
+            for(int x=0; x<xDim2; ++x){
+                cnx=level+(x+xDim2-1)%xDim2;
+                nodes[id].netCnxs.addValue(cnx);
+                if(x%2==0) {
+                    cnx = (level + xDim2 + x/2) % dimSq3;
+                    nodes[id].netCnxs.addValue(cnx);
+                }
+                cnx=level+(x+1)%xDim2;
+                nodes[id].netCnxs.addValue(cnx);
+                if(x%2==0) {
+                    cnx = (level - xDim1 + x/2 + dimSq3) % dimSq3;
+                    nodes[id].netCnxs.addValue(cnx);
+                }
+                ++id;
+            }
+        }
+        else{
+            for(int x=0; x<xDim1; ++x){
+                cnx=level+2*x;
+                nodes[id].netCnxs.addValue(cnx);
+                cnx=(level+xDim2+xDim1+2*x)%dimSq3;
+                nodes[id].netCnxs.addValue(cnx);
+                ++id;
+            }
+        }
+    }
+
+    //make connections to dual nodes in clockwise order
+    id=0;
+    level=0;
+    for(int y=0; y<yDim; ++y){
+        if(y%2==0){
+            for(int x=0; x<xDim2; ++x){
+                if(x%2==0){
+                    cnx=level+x/2;
+                    nodes[id].dualCnxs.addValue(cnx);
+                    cnx=(level+dimSq-dim+x/2)%dimSq;
+                    nodes[id].dualCnxs.addValue(cnx);
+                    cnx=(level+dimSq-dim+(x/2+dim-1)%dim)%dimSq;
+                    nodes[id].dualCnxs.addValue(cnx);
+                    cnx=level+(x/2+dim-1)%dim;
+                    nodes[id].dualCnxs.addValue(cnx);
+                }
+                else{
+                    cnx=level+(x-1)/2;
+                    nodes[id].dualCnxs.addValue(cnx);
+                    cnx=(level+dimSq-dim+(x-1)/2)%dimSq;
+                    nodes[id].dualCnxs.addValue(cnx);
+                }
+                ++id;
+            }
+        }
+        else{
+            for(int x=0; x<xDim1; ++x){
+                cnx=level+x;
+                nodes[id].dualCnxs.addValue(cnx);
+                cnx=level+(x+dim-1)%dim;
+                nodes[id].dualCnxs.addValue(cnx);
+                ++id;
+            }
+            level+=dim;
+        }
+    }
 }
 
 //Initialise mixed triangular and square lattices
@@ -1146,43 +1258,54 @@ Network Network::constructDual(int maxCnxs) {
         dualNetwork.nodes[i].dualCnxs=ordered;
     }
 
-    //add unordered network connections
+    //add ordered network connections
     for(int i=0; i<dualNetwork.nodes.n; ++i){
-        VecR<int> nonUnique(0,100);
-        for(int j=0; j<dualNetwork.nodes[i].dualCnxs.n; ++j){
-            for(int k=0; k<nodes[dualNetwork.nodes[i].dualCnxs[j]].dualCnxs.n; ++k){
-                nonUnique.addValue(nodes[dualNetwork.nodes[i].dualCnxs[j]].dualCnxs[k]);
-            }
+        VecR<int> dualCnxs=dualNetwork.nodes[i].dualCnxs;
+        VecR<int> common;
+        for(int j=0; j<dualCnxs.n; ++j){
+            int k=(j+1)%dualCnxs.n;
+            common=vCommonValues(nodes[dualCnxs[j]].dualCnxs,nodes[dualCnxs[k]].dualCnxs);
+            common.delValue(i);
+            dualNetwork.nodes[i].netCnxs.addValue(common[0]);
         }
-        VecR<int> unique=vUnique(nonUnique);
-        unique.delValue(i);
-        for(int j=0; j<unique.n; ++j){//need to share an edge to be neighbours
-            VecR<int> common=vCommonValues(dualNetwork.nodes[i].dualCnxs,dualNetwork.nodes[unique[j]].dualCnxs);
-            if(common.n==2) dualNetwork.nodes[i].netCnxs.addValue(unique[j]);
-        }
-    }
-    //order
-    for(int i=0; i<dualNetwork.nodes.n; ++i){
-        VecR<int> unordered=dualNetwork.nodes[i].netCnxs;
-        VecR<int> ordered(0,unordered.nMax);
-        VecR<int> dualC=dualNetwork.nodes[i].dualCnxs;
-        VecR<int> common0=vCommonValues(unordered,nodes[dualC[0]].dualCnxs);
-        VecR<int> common1=vCommonValues(unordered,nodes[dualC[1]].dualCnxs);
-        VecR<int> common2=vCommonValues(common0,common1);
-        ordered.addValue(common2[0]);
-        for(int j=2; j<dualC.n; ++j){
-            common0=common1;
-            common1=vCommonValues(unordered,nodes[dualC[j]].dualCnxs);
-            common2=vCommonValues(common0,common1);
-            ordered.addValue(common2[0]);
-        }
-        common0=common1;
-        common1=vCommonValues(unordered,nodes[dualC[0]].dualCnxs);
-        common2=vCommonValues(common0,common1);
-        ordered.addValue(common2[0]);
-        dualNetwork.nodes[i].netCnxs=ordered;
     }
 
+//    //add unordered network connections
+//    for(int i=0; i<dualNetwork.nodes.n; ++i){
+//        VecR<int> nonUnique(0,100);
+//        for(int j=0; j<dualNetwork.nodes[i].dualCnxs.n; ++j){
+//            for(int k=0; k<nodes[dualNetwork.nodes[i].dualCnxs[j]].dualCnxs.n; ++k){
+//                nonUnique.addValue(nodes[dualNetwork.nodes[i].dualCnxs[j]].dualCnxs[k]);
+//            }
+//        }
+//        VecR<int> unique=vUnique(nonUnique);
+//        unique.delValue(i);
+//        for(int j=0; j<unique.n; ++j){//need to share an edge to be neighbours
+//            VecR<int> common=vCommonValues(dualNetwork.nodes[i].dualCnxs,dualNetwork.nodes[unique[j]].dualCnxs);
+//            if(common.n==2) dualNetwork.nodes[i].netCnxs.addValue(unique[j]);
+//        }
+//    }
+//    //order
+//    for(int i=0; i<dualNetwork.nodes.n; ++i){
+//        VecR<int> unordered=dualNetwork.nodes[i].netCnxs;
+//        VecR<int> ordered(0,unordered.nMax);
+//        VecR<int> dualC=dualNetwork.nodes[i].dualCnxs;
+//        VecR<int> common0=vCommonValues(unordered,nodes[dualC[0]].dualCnxs);
+//        VecR<int> common1=vCommonValues(unordered,nodes[dualC[1]].dualCnxs);
+//        VecR<int> common2=vCommonValues(common0,common1);
+//        ordered.addValue(common2[0]);
+//        for(int j=2; j<dualC.n; ++j){
+//            common0=common1;
+//            common1=vCommonValues(unordered,nodes[dualC[j]].dualCnxs);
+//            common2=vCommonValues(common0,common1);
+//            ordered.addValue(common2[0]);
+//        }
+//        common0=common1;
+//        common1=vCommonValues(unordered,nodes[dualC[0]].dualCnxs);
+//        common2=vCommonValues(common0,common1);
+//        ordered.addValue(common2[0]);
+//        dualNetwork.nodes[i].netCnxs=ordered;
+//    }
 
     //make coordinate at centre of dual connnections
     if(geometryCode=="2DE") {

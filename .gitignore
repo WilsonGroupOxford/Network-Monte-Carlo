@@ -4,6 +4,7 @@ src/test/*
 src/debug/*
 src/*.log
 src/video/*
+src/data/*
 .idea*
 .DS_Store
 src/.idea*

@@ -2,26 +2,26 @@ I/O
 ./output_files/test      output prefix
 --------------------------------------------------
 Network Properties
-100         number of rings
+48         number of rings
 3           min ring size
 20          max ring size
 2           min node coordination
-6           max node coordination
-hexagonal     mix_0.7  0.6176      lattice (square,hexagonal,cairo,goldberg,inv_cubic,mix_X)
+20           max node coordination
+alt_square     mix_0.7  0.6176      lattice (square,hexagonal,cairo,alt_square,goldberg,inv_cubic,mix_X)
 default         starting crystal (default,var1,var2)
 --------------------------------------------------
 Monte Carlo Process
 energy      run type (energy,cost)
 mix      move type (switch/mix)
-10           random seed
+0           random seed
 --------------------------------------------------
 Monte Carlo Energy Search
 1          start temperature (10^x)
--3    end temperature (10^x)
--0.1           temperature increment (10^x)
+1    end temperature (10^x)
+-0.01           temperature increment (10^x)
 1        thermalisation temperature
-100         steps per temperature
-500           initial thermalisation steps
+0         steps per temperature
+0           initial thermalisation steps
 --------------------------------------------------
 Monte Carlo Cost Search ### DEPRECATED ###
 0         randomisation steps

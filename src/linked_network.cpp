@@ -24,6 +24,10 @@ LinkedNetwork::LinkedNetwork(int nodesA, string latticeA, int minA, int maxA, in
         rescale(6.0/(3.0+sqrt(3.0)));
         rescale((3.0+sqrt(3.0))/(8.0-2*sqrt(3.0)));
     }
+    else if(latticeA=="alt_square"){
+        networkA=Network(nodesA,"altsquare",maxA);
+        networkB=networkA.constructDual(maxB);
+    }
     else if(latticeA=="cubic"){
         networkA=Network(nodesA,"cubic",maxA);
         networkB=networkA.constructDual(maxB);
@@ -778,29 +782,24 @@ int LinkedNetwork::generateMixIds(int cnxType, VecF<int> &mixIdsA, VecF<int> &mi
         int c, d, e, f;
         int w, x, y, z, xx;
 
-        //c is defined as sharing a,u but not being b
-        c=findAssociatedNode(a,u,b);
         VecR<int> common, common1;
+        //c is defined as sharing a,u but not being b
+        c=findAssociatedNodeAB(a, u, b);
         //d is defined as sharing b,u but not being a
-        d=findAssociatedNode(b,u,a);
+        d=findAssociatedNodeAB(b, u, a);
         //e is defined as sharing a,v but not being b
-        e=findAssociatedNode(a,v,b);
+        e=findAssociatedNodeAB(a, v, b);
         //f is defined as sharing b,v but not being a
-        f=findAssociatedNode(b,v,a);
+        f=findAssociatedNodeAB(b, v, a);
 
-
-        common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[c].dualCnxs);
-        common.delValue(u);
-        w = common[0];
-        common = vCommonValues(networkA.nodes[a].dualCnxs, networkA.nodes[e].dualCnxs);
-        common.delValue(v);
-        x = common[0];
-        common = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[d].dualCnxs);
-        common.delValue(u);
-        y = common[0];
-        common = vCommonValues(networkA.nodes[b].dualCnxs, networkA.nodes[f].dualCnxs);
-        common.delValue(v);
-        z = common[0];
+        //w is defines as sharing a,c but not being u
+        w=findAssociatedNodeAA(a,c,u);
+        //x is defines as sharing a,e but not being v
+        x=findAssociatedNodeAA(a,e,v);
+        //y is defines as sharing b,d but not being u
+        y=findAssociatedNodeAA(b,d,u);
+        //z is defines as sharing b,f but not being v
+        z=findAssociatedNodeAA(b,f,v);
 
         //Find next node connected to x by inspecting around a
         int nCnxs=networkA.nodes[a].dualCnxs.n;
@@ -855,7 +854,7 @@ int LinkedNetwork::generateMixIds(int cnxType, VecF<int> &mixIdsA, VecF<int> &mi
     }
 }
 
-int LinkedNetwork::findAssociatedNode(int idA, int idB, int idDel) {
+int LinkedNetwork::findAssociatedNodeAB(int idA, int idB, int idDel) {
 
     //Find node that shares idA and idB but is not idDel
     int associated=-1;
@@ -879,6 +878,28 @@ int LinkedNetwork::findAssociatedNode(int idA, int idB, int idDel) {
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    if(associated==-1) cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+
+    return associated;
+}
+
+int LinkedNetwork::findAssociatedNodeAA(int idA, int idB, int idDel) {
+
+    //Find node that shares idA and idB but is not idDel
+    int associated=-1;
+    VecR<int> common, common1;
+    common = vCommonValues(networkA.nodes[idA].dualCnxs, networkA.nodes[idB].dualCnxs);
+    common.delValue(idDel);
+    if(common.n==1) associated=common[0];
+    else {//rare case with periodic interactions
+        for(int i=0; i<common.n; ++i){
+            if(vContains(networkB.nodes[common[i]].netCnxs,idDel)){
+                associated=common[i];
+                break;
             }
         }
     }
