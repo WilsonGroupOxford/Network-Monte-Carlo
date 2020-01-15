@@ -186,6 +186,7 @@ class Network:
             if True==False:
                 pass
             else:
+                plt.scatter(ring[:,0],ring[:,1],zorder=2,c="k",alpha=alpha,s=1)
                 patches.append(Polygon(np.array(ring), True))
                 ring_colours.append(self.ring_colours[ring[:, 0].size])
                 ring[:,0]-=x_shift
@@ -209,7 +210,7 @@ class Network:
         #plt.scatter(self.crds[mask_3,0],self.crds[mask_3,1],zorder=2,c="darkorange",alpha=alpha,s=10)
         #plt.scatter(self.crds[mask_4,0],self.crds[mask_4,1],zorder=2,c="forestgreen",alpha=alpha,s=10)
         for i, cnxs in enumerate(self.netCnxs):
-            plt.text(self.crds[i,0],self.crds[i,1],i)
+            #plt.text(self.crds[i,0],self.crds[i,1],i)
             for j in cnxs:
                 x = self.crds[j,0]-self.crds[i,0]
                 y = self.crds[j,1]-self.crds[i,1]
@@ -359,7 +360,7 @@ def main():
             for x in [-1,0,1]:
                 for y in [-1,0,1]:
                     if abs(x)+abs(y)>0:
-                        ax=network_a.plot_rings(ax,lw=0.5,x_shift=x,y_shift=y,alpha=0.5)
+                        ax=network_a.plot_rings(ax,lw=0.5,x_shift=x,y_shift=y,alpha=1.0)
     if "n" in options_a:
         ax=network_a.plot_connections(ax)
         if "p" in options_a:
@@ -390,11 +391,15 @@ def main():
                 for y in [-1,0,1]:
                     if abs(x)+abs(y)>0:
                         ax=network_b.plot_connections(ax,x_shift=x,y_shift=y,alpha=0.5)
+    
+    ax.set_xlim(-network_a.pb[0]*0.6,network_a.pb[0]*1.6)
+    ax.set_ylim(-network_a.pb[0]*0.6,network_a.pb[0]*1.6)
 
     if "s" in options_s:
-        plt.savefig("{:}.png".format(prefix),dpi=800)
+        plt.savefig("{:}.png".format(prefix),dpi=400)
     if "S" in options_s:
         plt.savefig("{:}.pdf".format(prefix))
+        
 
     plt.show()
 

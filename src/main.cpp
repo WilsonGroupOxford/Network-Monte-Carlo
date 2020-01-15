@@ -390,7 +390,7 @@ int main(){
                         outClusterA.writeRowVector(cluster);
                     }
                 }
-                cout<<i<<" "<<network.checkConsistency()<<endl;
+//                cout<<i<<" "<<network.checkConsistency()<<endl;
                 if (i%structureFreq==0 && writeStructures==1) {
                     network.syncCoordinates();
                     network.write(prefixOut+"_t"+to_string(t)+"_"+to_string(i));

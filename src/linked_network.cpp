@@ -362,13 +362,36 @@ int LinkedNetwork::pickRandomCnx(int& a, int& b, int& u, int& v, mt19937& gen) {
         u=common[randIndex];
         v=common[1-randIndex];
     }
-
-    else{
-        wrapCoordinates();
-        syncCoordinates();
-        write("debug");
-        cout<<a<<" "<<b<<" "<<common<<endl;
-        throw string("Error in random connection - incorrect dual ids");
+    else if(common.n==3){
+        //check a-b in ring
+        VecR<int> uv(0,common.n);
+        for(int i=0; i<common.n; ++i){
+            VecR<int> ringCnxs=networkB.nodes[common[i]].dualCnxs;
+            for(int j=0; j<ringCnxs.n; ++j){
+                int k=(j+ringCnxs.n-1)%ringCnxs.n;
+                int l=(j+1)%ringCnxs.n;
+                if(ringCnxs[j]==a && ringCnxs[k]==b){
+                    uv.addValue(common[i]);
+                    break;
+                }
+                else if(ringCnxs[j]==a && ringCnxs[l]==b){
+                    uv.addValue(common[i]);
+                    break;
+                }
+            }
+        }
+        if(uv.n==2){
+            int randIndex=randomDirection(gen);
+            u=uv[randIndex];
+            v=uv[1-randIndex];
+        }
+        else{
+            wrapCoordinates();
+            syncCoordinates();
+            write("debug");
+            cout<<a<<" "<<b<<" "<<common<<endl;
+            throw string("Error in random connection - incorrect dual ids");
+        }
     }
 
     return cnxType;
@@ -858,23 +881,34 @@ int LinkedNetwork::findAssociatedNodeAB(int idA, int idB, int idDel) {
 
     //Find node that shares idA and idB but is not idDel
     int associated=-1;
-    VecR<int> common, common1;
+    VecR<int> common;
     common = vCommonValues(networkA.nodes[idA].netCnxs, networkB.nodes[idB].dualCnxs);
     common.delValue(idDel);
     if(common.n==1) associated=common[0];
     else{//rare high temperature occurrence as a result of 2-cnd nodes giving ring inside ring
+        VecR<int> common1(0,common.n);
         int nCnxs=networkA.nodes[idA].netCnxs.n;
         for(int i=0; i<nCnxs; ++i){
             if(networkA.nodes[idA].netCnxs[i]==idDel){
                 int l=networkA.nodes[idA].netCnxs[(i+1)%nCnxs];
                 int r=networkA.nodes[idA].netCnxs[(i-1+nCnxs)%nCnxs];
                 for(int j=0; j<common.n; ++j){
-                    if(common[j]==l){
-                        associated=common[j];
-                        break;
-                    }
-                    else if(common[j]==r){
-                        associated=common[j];
+                    if(common[j]==l) common1.addValue(common[j]);
+                    else if(common[j]==r) common1.addValue(common[j]);
+                }
+                break;
+            }
+        }
+        if(common1.n==1) associated=common1[0];
+        else{//even rarer case
+            int nCnxs=networkB.nodes[idB].dualCnxs.n;
+            for(int i=0; i<nCnxs; ++i){
+                if(networkB.nodes[idB].dualCnxs[i]==idDel){
+                    int j;
+                    if(networkB.nodes[idB].dualCnxs[(i+1)%nCnxs]==idA) j=(i+2)%nCnxs;
+                    else if(networkB.nodes[idB].dualCnxs[(i+nCnxs-1)%nCnxs]==idA) j=(i+nCnxs-2)%nCnxs;
+                    if(vContains(common1,networkB.nodes[idB].dualCnxs[j])){
+                        associated=networkB.nodes[idB].dualCnxs[j];
                         break;
                     }
                 }
@@ -882,7 +916,14 @@ int LinkedNetwork::findAssociatedNodeAB(int idA, int idB, int idDel) {
         }
     }
 
-    if(associated==-1) cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+    if(associated==-1){
+        wrapCoordinates();
+        syncCoordinates();
+        write("debug");
+        cout<<idA<<" "<<idB<<" "<<" "<<idDel<<" "<<common<<endl;
+        cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+        exit(9);
+    }
 
     return associated;
 }
@@ -891,20 +932,44 @@ int LinkedNetwork::findAssociatedNodeAA(int idA, int idB, int idDel) {
 
     //Find node that shares idA and idB but is not idDel
     int associated=-1;
-    VecR<int> common, common1;
+    VecR<int> common;
     common = vCommonValues(networkA.nodes[idA].dualCnxs, networkA.nodes[idB].dualCnxs);
     common.delValue(idDel);
     if(common.n==1) associated=common[0];
     else {//rare case with periodic interactions
+        VecR<int> common1(0,common.n);
         for(int i=0; i<common.n; ++i){
-            if(vContains(networkB.nodes[common[i]].netCnxs,idDel)){
-                associated=common[i];
-                break;
+            if(vContains(networkB.nodes[common[i]].netCnxs,idDel)) common1.addValue(common[i]);
+        }
+        if(common1.n==1) associated=common1[0];
+        else{//rare case of large ring surrounding group
+            //check a,b adjacent on ring
+            VecR<int> common2(0,common1.n);
+            for(int i=0; i<common1.n; ++i){
+                VecR<int> ring=networkB.nodes[common[i]].dualCnxs;
+                for(int j=0; j<ring.n; ++j){
+                    int k=(j+1)%ring.n;
+                    if(ring[j]==idA && ring[k]==idB){
+                        common2.addValue(common1[i]);
+                        break;
+                    }
+                    else if(ring[j]==idB && ring[k]==idA){
+                        common2.addValue(common1[i]);
+                        break;
+                    }
+                }
             }
+            if(common2.n==1) associated=common2[0];
         }
     }
 
-    if(associated==-1) cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+    if(associated==-1){
+        wrapCoordinates();
+        syncCoordinates();
+        write("debug");
+        cout<<idA<<" "<<idB<<" "<<idDel<<" "<<common<<endl;
+        cout<<"ERROR IN ASSOCIATED NODE"<<endl;
+    }
 
     return associated;
 }
@@ -1464,16 +1529,6 @@ void LinkedNetwork::mixCnx(VecF<int> mixIdsA, VecF<int> mixIdsB) {
     z=mixIdsB[5];
     xx=mixIdsB[6];
 
-//    cout<<a<<" "<<b<<endl;
-
-    if(a==30 && b==40){
-        int aaa=0;
-//        for(int i=5; i<8; ++i){
-//            for(int j=5; j<8; ++j){
-//                cout<<i<<" "<<j<<" "<<networkB.edgeDistribution[i][j]<<endl;
-//            }
-//        }
-    }
 
     //Apply changes to descriptors due to breaking connections
     //For network A node distribution and edge distribution will change as a result of a,b mixing
@@ -1575,6 +1630,23 @@ void LinkedNetwork::mixCnx(VecF<int> mixIdsA, VecF<int> mixIdsB) {
         ++networkB.edgeDistribution[nx][nCnx];
         if(id!=v) ++networkB.edgeDistribution[nCnx][nx]; //prevent double counting
     }
+}
+
+//Check mix move did not introduce any edges which form part of three rings
+bool LinkedNetwork::mixCheckEdges(int id) {
+
+    bool edgeCheck=true;
+    int nCnxs=networkB.nodes[id].dualCnxs.n;
+    for(int i=0; i<nCnxs; ++i){
+        int j=networkB.nodes[id].dualCnxs[i];
+        int k=networkB.nodes[id].dualCnxs[(i+1)%nCnxs];
+        VecR<int> common=vCommonValues(networkA.nodes[j].dualCnxs,networkA.nodes[k].dualCnxs);
+        if(common.n>2){
+            edgeCheck=false;
+            break;
+        }
+    }
+    return edgeCheck;
 }
 
 //Rearrange nodes after connection switch to maintain convexity
@@ -1789,14 +1861,19 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
     VecF<int> optStatus;
 //    mixCnx34(mixIdsA,mixIdsB);
     mixCnx(mixIdsA,mixIdsB);
+    geometryOK=mixCheckEdges(u);
+    if(geometryOK) geometryOK=mixCheckEdges(v);
     //Unrestricted local optimisation of switched atoms
-    optStatus=localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
-    if(potParamsD[1]==1) {
-        for (int i = 0; i < mixIdsA.n; ++i) {
-            geometryOK = checkConvexity(mixIdsA[i]);
-            if (!geometryOK) break;
+    if(geometryOK) {
+        optStatus = localGeometryOptimisation(a, b, 1, false, false); //bond switch atoms only
+        if (potParamsD[1] == 1) {
+            for (int i = 0; i < mixIdsA.n; ++i) {
+                geometryOK = checkConvexity(mixIdsA[i]);
+                if (!geometryOK) break;
+            }
         }
     }
+    else optStatus = VecF<int>(3);
     if(!geometryOK) optStatus[0]=4;
 
     //Restricted optimisation of local region
@@ -1808,7 +1885,6 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
 
     //Accept or reject
     int accept=mc.acceptanceCriterion(energy);
-//    accept=1;
     if(accept==0){
         energy=saveEnergy;
         crdsA=saveCrdsA;
@@ -2485,10 +2561,7 @@ bool LinkedNetwork::checkCnxConsistency() {
             id0=networkB.nodes[i].netCnxs[j];
             id1=networkB.nodes[i].netCnxs[(j+1)%nCnxs];
             VecR<int> common=vCommonValues(networkB.nodes[id0].dualCnxs,networkB.nodes[id1].dualCnxs);
-            if(common.n==0){
-                int debug=1;
-                nbNetCnx=false;
-            }
+            if(common.n==0) nbNetCnx=false;
         }
     }
 

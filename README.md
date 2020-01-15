@@ -41,8 +41,10 @@ Network Properties
 5: 92           number of rings
 6: 3            minimum ring size
 7: 20           maximum ring size
-8: hexagonal    lattice (square,hexagonal,cairo,goldberg,inv_cubic,mix_X)
-9: default      starting crystal (default,var1,var2)
+8: 3            minimum atom coordination
+9: 20           maximum atom coordination
+10: hexagonal    lattice (square,hexagonal,cairo,goldberg,inv_cubic,mix_X)
+11: default      starting crystal (default,var1,var2)
 ```
 These parameters set the fundamental properties of the network. 
 The starting lattices can be:
@@ -50,6 +52,7 @@ The starting lattices can be:
 * square: planar with 4-coordinate nodes
 * cairo: planar mixed 3/4-coordinate nodes
 * mix_X: planar mixed 3/4-coordinate with the proportion of 3-cnd determined by X (e.g. mix_0.5)
+* alt_square: planar mixed 2/4 coordinate nodes
 * goldberg: spherical 3-coordinate ''football''
 * inv_cubic: spherical 4-coordinate
 
@@ -59,21 +62,23 @@ Just leave the starting crystal as default, unless you are feeling very adventur
 
 ```text:
 Monte Carlo Process
-12: energy      run type (energy,cost)
-13: 2           random seed
+14: energy      run type (energy,cost)
+15: mix         move type (switch/mix)
+16: 2           random seed
 ```
 
 Leave the run type as energy (cost function deprecated for now). 
+The move type should be set as switch only if using a regular tiling and you want the coordination to be fixed.
 The seed is for the Mersenne-Twister random number generator.
 
 ```text:
 Monte Carlo Energy Search
-16: 1       start temperature (10^x)
-17: -3      end temperature (10^x)
-18: -0.1    temperature increment (10^x)
-19: 1.0     thermalisation temperature
-20: 100     steps per temperature
-21: 1000    initial thermalisation steps
+19: 1       start temperature (10^x)
+20: -3      end temperature (10^x)
+21: -0.1    temperature increment (10^x)
+22: 1.0     thermalisation temperature
+23: 100     steps per temperature
+24: 1000    initial thermalisation steps
 ```
 
 The core algorithm is essentially simulated annealing. 
@@ -86,10 +91,10 @@ Similarly setting the start and end temperatures equal will run at a set tempera
 
 ```text:
 Potential Model
-40: 0.8     harmonic bond force constant
-41: 0.2     harmonic angle force constant
-42: 10.0    harmonic geometry constraint
-43: 1       maintain convexity (0/1)
+43: 0.8     harmonic bond force constant
+44: 0.2     harmonic angle force constant
+45: 10.0    harmonic geometry constraint
+46: 1       maintain convexity (0/1)
 ``` 
 
 All bonds are modelled as harmonic springs with an equilibrium length of 1, and the supplied force constant.
@@ -99,11 +104,11 @@ Selecting to maintain convexity turns on the ReB angle potential, preventing rin
 
 ```text:
 Geometry Optimisation
-46: 1000        monte carlo local max iterations
-47: 1           global minimisation max iterations
-48: 0.5         tau backtracking parameter
-49: 1e-06       tolerance
-50: 5           local region size
+49: 1000        monte carlo local max iterations
+50: 1           global minimisation max iterations
+51: 0.5         tau backtracking parameter
+52: 1e-06       tolerance
+53: 5           local region size
 ```
 
 These are geometry optimisation parameters which you can probably just leave.
@@ -113,9 +118,9 @@ The convergence results from the minimisation are at the end of the log file, wh
 
 ```text:
 Analysis
-53: 1          analysis write frequency
-54: 1          write sampling structures
-55: 100        structure write frequency
+56: 1          analysis write frequency
+57: 1          write sampling structures
+58: 100        structure write frequency
 ```
 
 The very minimalist analysis control: you will get what you're given and like it.
@@ -152,7 +157,8 @@ Intermediate structures will be prefixed with a temperature and step index.
 The following analysis files are produced for each sample configuration:
 
 * ```*_ringstats.out```: ring statistics
-* ```*_correlations.out```: assortativity, estimated AW alpha, AW alpha, AW variance, AW r-squared
+* ```*_cndstats.out```: atomic coordination statistics
+* ```*_correlations.out```: assortativity, estimated AW alpha, AW alpha, AW variance, AW r-squared, atomic assortativity
 * ```*_energy.out```: potential energy
 * ```*_entropy.out```: Shannon entropy of node degree distribution, joint degree distribution, information transfer function of joint degree distribution
 * ```*_temperature.out```: Monte Carlo temperature
