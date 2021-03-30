@@ -16,6 +16,7 @@
 
 using namespace std;
 
+
 class LinkedNetwork {
 private:
 public:
@@ -38,7 +39,7 @@ public:
     LinkedNetwork();
     LinkedNetwork(int nodesA, string latticeA, int minA, int maxA, int minB, int maxB); //construct with starting A lattice
     LinkedNetwork(string prefix);  //construct by loading from files
-
+    bool checkRingNodesUnique();
     //Member Functions
     void initialisePotentialModel(double ak, double bk, double ck=0.0, int convex=0); //set up potential model
     void initialiseGeometryOpt(int iterations, double tau, double tolerance, int localExtent); //set up geometry optimsiation parameters

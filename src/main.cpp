@@ -5,6 +5,40 @@
 
 using namespace std;
 
+double rescale_box(LinkedNetwork& link_net, const double scale_x, const double scale_y) {
+    //! Rescale the box with in two directions.
+    //!
+    /*!
+     * \param link_net a linked network to rescale
+     * \param scale_x the scale factor in the x direction
+     * \param scale_y the scale factor in the y direction
+     *
+     */
+    // Rescale the periodic boundaries for networks A and B
+    link_net.networkA.pb[0] *= scale_x;
+    link_net.networkA.pb[1] *= scale_y;
+    link_net.networkA.rpb[0] = 1.0 / link_net.networkA.pb[0];
+    link_net.networkA.rpb[1] = 1.0 / link_net.networkA.pb[1];
+    
+    link_net.networkB.pb[0] *= scale_x;
+    link_net.networkB.pb[1] *= scale_y;
+    link_net.networkB.rpb[0] = 1.0 / link_net.networkB.pb[0];
+    link_net.networkB.rpb[1] = 1.0 / link_net.networkB.pb[1];
+    
+    // Change crdsA and then force them into the connected networks.
+    for(int i=0; i<link_net.networkA.nodes.n; ++i){
+        link_net.crdsA[2*i] *= scale_x;
+        link_net.crdsA[2*i+1] *= scale_y;       
+    }
+    link_net.syncCoordinates();
+       
+    // Force the network to re-calculate its energy so we don't drop out of sync
+    link_net.globalGeometryOptimisation(false, false);
+    auto new_energy = link_net.globalPotentialEnergy(false, false);
+    link_net.mc.setEnergy(new_energy);
+    return new_energy;   
+}
+
 int main(){
 
     //Set up logfile
@@ -155,6 +189,19 @@ int main(){
     istringstream(line)>>structureFreq;
     getline(inputFile,line);
     logfile.write("Write parameters read");
+    getline(inputFile, line);
+    double scale_factor = 1.0;
+    std::istringstream(line) >> scale_factor;
+    double stretchFacX = 1.0;
+    double stretchFacY = 1.0;    
+    getline(inputFile, line);   
+    std::istringstream(line) >> stretchFacX >> stretchFacY; 
+    
+
+    int stretchFreq = 1;
+    getline(inputFile, line);
+    std::istringstream(line) >> stretchFreq;
+    
     inputFile.close();
     --logfile.currIndent;
     logfile.write("Input file closed");
@@ -177,6 +224,11 @@ int main(){
         logfile.write("Monte carlo log temperature increment:", mcIncT);
         logfile.write("Monte carlo steps per increment:", mcSteps);
         logfile.write("Equilibrium steps:", equilSteps);
+        logfile.write("Stretching Frequency:", stretchFreq);
+        logfile.write("Stretching Factor X:", stretchFacX);
+        logfile.write("Stretching Factor Y:", stretchFacY);
+        logfile.write("Total Stretch X:", std::pow(stretchFacX, mcSteps/stretchFreq));
+        logfile.write("Total Stretch Y:", std::pow(stretchFacY, mcSteps/stretchFreq));
     }
     else if(runType=="cost"){
         logfile.write("Monte carlo p lower limit:", costLowLimP);
@@ -230,6 +282,7 @@ int main(){
     OutputFile outClusterA(prefixOut+"_cluster_a.out");
     OutputFile outClusterB(prefixOut+"_cluster_b.out");
     OutputFile outCndStats(prefixOut+"_cndstats.out");
+    OutputFile outPb(prefixOut+"_pb.out");
     outGeometry.initVariables(6,4,60,20);
     outAreas.initVariables(6,4,60,30);
     outEmatrix.initVariables(1,4,60,int(log10(nRings*12))+2);
@@ -254,7 +307,10 @@ int main(){
     angHist=0.0;
 
     //Run monte carlo
-    cout<<network.mc.getEnergy()<<endl;
+    logfile.write("Box size before rescaling: " + std::to_string(network.networkA.pb[0]) + " x  "+ std::to_string(network.networkA.pb[1]));
+    network.rescale(scale_factor);
+    logfile.write("Box size after rescaling: " + std::to_string(network.networkA.pb[0]) + " x  "+ std::to_string(network.networkA.pb[1]));
+    std::cout<< "Initial energy is " << network.mc.getEnergy()<< "\n";
     int accepted=0,optIterations=0;
     VecF<int> optCodes(5);
     optCodes=0;
@@ -276,11 +332,11 @@ int main(){
 //        cout << i << endl;
             if (i % trackFreq == 0) {
                 double dt = logfile.timeElapsed();
-                string track =
-                        to_string(accepted) + "/" + to_string(i) + " moves accepted/completed in " + to_string(dt) +
+                std::string track =
+                        std::to_string(accepted) + "/" + std::to_string(i) + " moves accepted/completed in " + to_string(dt) +
                         " seconds";
                 logfile.write(track);
-                cout << "t" << " " << i << " " << accepted << endl;
+                std::cout << track << std::endl;
             }
             if (i % analysisFreq == 0) {
                 VecF<double> ringStats = network.getNodeDistribution("B");
@@ -330,15 +386,25 @@ int main(){
         //Perform monte carlo simulation
         logfile.write("Running Monte Carlo simulation");
         ++logfile.currIndent;
-        int nT = (mcEndT - mcStartT) / mcIncT;
+        
+        int nT = std::max(static_cast<int>((mcEndT - mcStartT) / mcIncT), 0);
+        int totalsteps = 0;
         for (int t = 0; t <= nT; ++t) {
             mcT = pow(10, mcStartT + t * mcIncT);
             network.mc.setTemperature(mcT);
             logfile.write("Temperature:", mcT);
             ++logfile.currIndent;
             for (int i = 1; i <= mcSteps; ++i) {
-                if(!mixedLattice) moveStatus = network.monteCarloSwitchMove(energy);
-                else moveStatus = network.monteCarloMixMove(energy);
+                totalsteps++;
+                if (totalsteps % stretchFreq == 0) {
+                    energy = rescale_box(network, stretchFacX, stretchFacY);
+                }
+                
+                if(!mixedLattice) {
+                    moveStatus = network.monteCarloSwitchMove(energy);
+                } else {
+                    moveStatus = network.monteCarloMixMove(energy);
+                }
                 accepted += moveStatus[0];
                 optCodes[moveStatus[1]] += 1;
                 optIterations += moveStatus[2];
@@ -346,10 +412,10 @@ int main(){
                 if (i % trackFreq == 0) {
                     double dt = logfile.timeElapsed();
                     string track =
-                            to_string(accepted) + "/" + to_string(i) + " moves accepted/completed in " + to_string(dt) +
-                            " seconds";
+                            to_string(accepted) + "/" + to_string(totalsteps) + " moves accepted/completed in " + to_string(dt) +
+                            " seconds. Energy is " + std::to_string(energy);
                     logfile.write(track);
-                    cout << t << " " << i << " " << accepted << endl;
+                    std::cout << track << std::endl;
                 }
                 if (i % analysisFreq == 0) {
                     VecF<double> ringStats = network.getNodeDistribution("B");
@@ -376,6 +442,7 @@ int main(){
                     outEnergy.write(energy);
                     outEntropy.writeRowVector(s);
                     outTemperature.write(mcT);
+                    outPb.write(network.networkA.pb[0], network.networkA.pb[1]);
                     outGeometry.writeRowVector(geomStats);
                     outAreas.writeRowVector(a);
                     outAreas.writeRowVector(aSq);
@@ -535,6 +602,7 @@ int main(){
                         outRingStats.writeRowVector(ringStats);
                         outCorr.writeRowVector(corr);
                         outEnergy.write(energy);
+                        outPb.write(network.networkA.pb[0], network.networkA.pb[1]);
                         outEntropy.writeRowVector(s);
                         outTemperature.write(costT);
                         outGeometry.writeRowVector(geomStats);

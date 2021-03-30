@@ -168,7 +168,7 @@ void VecR<T>::swapValue(T vDel, T vAdd, T vBetween0, T vBetween1) {
             swap=true;
         }
     }
-    if(!swap) throw string("Cannot swap value between values as sequence not present in vector");
+    if(!swap) throw std::runtime_error("Cannot swap value between values as sequence not present in vector");
 }
 
 //Insert value in vector between two others

@@ -228,7 +228,7 @@ void LinkedNetwork::optimalProjection(string projType) {
                 id0=i;
             }
         }
-        if(id0==searchLim-1) throw string("Initial spherical minimisation reached search limit");
+        if(id0==searchLim-1) throw std::runtime_error("Initial spherical minimisation reached search limit");
         else{
             lowerLim=id0-1.0;
             minRadius=id0;
@@ -318,7 +318,7 @@ int LinkedNetwork::pickRandomCnx34(int &a, int &b, int &u, int &v, mt19937 &gen)
         a=n0;
         b=n1;
     }
-    else throw string("Error in random connection - incorrect coordinations");
+    else throw std::runtime_error("Error in random connection - incorrect coordinations");
 
     //get nodes in dual in random orientation
     uniform_int_distribution<int> randomDirection(0,1);
@@ -333,7 +333,7 @@ int LinkedNetwork::pickRandomCnx34(int &a, int &b, int &u, int &v, mt19937 &gen)
         syncCoordinates();
         write("debug");
         cout<<a<<" "<<b<<" "<<common<<endl;
-        throw string("Error in random connection - incorrect dual ids");
+        throw std::runtime_error("Error in random connection - incorrect dual ids");
     }
 
     return cnxType;
@@ -390,7 +390,7 @@ int LinkedNetwork::pickRandomCnx(int& a, int& b, int& u, int& v, mt19937& gen) {
             syncCoordinates();
             write("debug");
             cout<<a<<" "<<b<<" "<<common<<endl;
-            throw string("Error in random connection - incorrect dual ids");
+            throw std::runtime_error("Error in random connection - incorrect dual ids");
         }
     }
 
@@ -1642,11 +1642,67 @@ bool LinkedNetwork::mixCheckEdges(int id) {
         int k=networkB.nodes[id].dualCnxs[(i+1)%nCnxs];
         VecR<int> common=vCommonValues(networkA.nodes[j].dualCnxs,networkA.nodes[k].dualCnxs);
         if(common.n>2){
-            edgeCheck=false;
-            break;
+            return false;
         }
     }
     return edgeCheck;
+}
+
+bool LinkedNetwork::checkRingNodesUnique() {
+    // Check if each ring in this dual network has a
+    // unique set of nodes in it and doesn't revisit any
+    // nodes.
+    for (int i = 0; i < networkB.nodes.n; ++i) {
+        auto node = networkB.nodes[i];
+        auto unique_duals = vUnique(node.dualCnxs);
+        if (unique_duals.n != node.dualCnxs.n) {
+            std::cerr << "Rejecting this because the B dual connections are not unique. Got " << unique_duals.n << ", " << node.dualCnxs.n << "\n";
+            std::cerr << "Unique: [";
+            for (int j = 0; j < unique_duals.n; ++j) {
+                std::cerr << unique_duals[j] << ", ";
+            }
+            std::cerr << "]\n";
+
+            std::cerr << "Duals: [";
+            for (int j = 0; j < node.dualCnxs.n; ++j) {
+                std::cerr << node.dualCnxs[j] << ", ";
+            }
+            std::cerr << "]\n";
+            return false;
+        }
+        auto unique_cnxs = vUnique(node.netCnxs);
+        if (unique_cnxs.n != node.netCnxs.n) {
+            std::cerr << "Rejecting this because the B network connections are not unique. Got " << unique_cnxs.n << ", " << node.netCnxs.n << "\n";
+            std::cerr << "Unique: [";
+            for (int j = 0; j < unique_cnxs.n; ++j) {
+                std::cerr << unique_cnxs[j] << ", ";
+            }
+            std::cerr << "]\n";
+
+            std::cerr << "Cnxs: [";
+            for (int j = 0; j < node.netCnxs.n; ++j) {
+                std::cerr << node.netCnxs[j] << ", ";
+            }
+            std::cerr << "]\n";
+            return false;
+            return false;
+        }
+    }
+
+    for (int i = 0; i < networkA.nodes.n; ++i) {
+        auto node = networkA.nodes[i];
+        auto unique_duals = vUnique(node.dualCnxs);
+        if (unique_duals.n != node.dualCnxs.n) {
+            std::cerr << "Rejecting this because the A dual connections are not unique. Got " << unique_duals.n << ", " << node.dualCnxs.n << "\n";
+            return false;
+        }
+        auto unique_cnxs = vUnique(node.netCnxs);
+        if (unique_cnxs.n != node.netCnxs.n) {
+            std::cerr << "Rejecting this because the A net connections are not unique. Got " << unique_cnxs.n << ", " << node.netCnxs.n << "\n";
+            return false;
+        }
+    }
+    return true;
 }
 
 //Rearrange nodes after connection switch to maintain convexity
@@ -1757,7 +1813,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
-    if(validMove==1) throw string("Cannot find any valid switch moves");
+    if(validMove==1) throw std::runtime_error("Cannot find any valid switch moves");
 
     //Save current state
     double saveEnergy=energy;
@@ -1775,7 +1831,7 @@ VecF<int> LinkedNetwork::monteCarloSwitchMove(double& energy) {
     if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
     else if(cnxType==43) switchCnx43(switchIdsA,switchIdsB);
-    else throw string("Not yet implemented!");
+    else throw std::runtime_error("Not yet implemented!");
     //Rearrange nodes after switch
     bool geometryOK=true;
     if(potParamsD[1]==0) localGeometryOptimisation(a,b,1,false,false);
@@ -1841,9 +1897,14 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
         cnxType=pickRandomCnx(a,b,u,v,mtGen);
 //        validMove=generateMixIds34(cnxType,mixIdsA,mixIdsB,a,b,u,v);
         validMove=generateMixIds(cnxType,mixIdsA,mixIdsB,a,b,u,v);
-        if(validMove==0) break;
+        if(validMove==0) {
+            //std::cerr << "Found a valid move with a = " << a <<", b = " << b << ", u = " << u << ", v = " << v
+            //          << ", of type " << cnxType << "\n";
+            //std::cerr << "Mix ids A = " << mixIdsA <<", Mix ids B = " << mixIdsB << "\n";
+            break;
+        }
     }
-    if(validMove==1) throw string("Cannot find any valid switch moves");
+    if(validMove==1) throw std::runtime_error("Cannot find any valid switch moves");
 
     //Save current state
     double saveEnergy=energy;
@@ -1862,7 +1923,12 @@ VecF<int> LinkedNetwork::monteCarloMixMove(double& energy) {
 //    mixCnx34(mixIdsA,mixIdsB);
     mixCnx(mixIdsA,mixIdsB);
     geometryOK=mixCheckEdges(u);
+
     if(geometryOK) geometryOK=mixCheckEdges(v);
+
+    //if (geometryOK) {
+    //     geometryOK = checkRingNodesUnique();
+    //}
     //Unrestricted local optimisation of switched atoms
     if(geometryOK) {
         optStatus = localGeometryOptimisation(a, b, 1, false, false); //bond switch atoms only
@@ -1929,7 +1995,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
         validMove=generateSwitchIds34(cnxType,switchIdsA,switchIdsB,a,b,u,v);
         if(validMove==0) break;
     }
-    if(validMove==1) throw string("Cannot find any valid switch moves");
+    if(validMove==1) throw std::runtime_error("Cannot find any valid switch moves");
 
     //Save current state
     double saveCost=cost;
@@ -1947,7 +2013,7 @@ VecF<int> LinkedNetwork::monteCarloCostSwitchMove(double &cost, double &energy, 
     VecF<int> optStatus;
     if(cnxType==33) switchCnx33(switchIdsA,switchIdsB);
     else if(cnxType==44) switchCnx44(switchIdsA,switchIdsB);
-    else throw string("Not yet implemented!");
+    else throw std::runtime_error("Not yet implemented!");
     cost=costFunction(pTarget,rTarget);
     //Unrestricted optimisation of switched atoms
     localGeometryOptimisation(a,b,1,false,false); //bond switch atoms only
