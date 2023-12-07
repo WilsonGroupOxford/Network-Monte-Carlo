@@ -2,7 +2,7 @@
 
 ### Overview
 
-This is a Monte Carlo code to generate amorphous 2D networks of physical systems.
+his is a Monte Carlo code to generate amorphous 2D networks of physical systems.
 These span a range of topologies, coordination environments and potential models.
 The code also performs network analysis on the resulting structures,
 and information for visualisation. 
