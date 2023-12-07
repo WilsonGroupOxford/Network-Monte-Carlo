@@ -212,6 +212,13 @@ They are really for my personal use, so good luck.
 If you have a planar network run:
 ```python visualise_network.py prefix -flags```
 
+The flags are as follows:
+
+-a/--network_a [rings nodes periodic]        plot network_a's rings and/or nodes and/or periodically
+-a/--network_b [rings nodes periodic]        plot network_b's rings and/or nodes and/or periodically
+-s [path]                                    save plot as a png, if no path given, save in current working directory
+-s [path]                                    save plot as a pdf, if no path given, save in current working directory
+
 If you have a fullerene network run:
 ```python 3d_visualise_network.py prefix -flags```
 
